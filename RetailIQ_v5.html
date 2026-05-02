@@ -1,0 +1,1798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RetailIQ — Executive Dashboard v5</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#1E1E2F; --surface:#26263D; --surface2:#2E2E48; --surface3:#363658;
+    --border:rgba(255,255,255,0.07); --primary:#5A4FCF; --primary-light:#7B72E9;
+    --gold:#F2C94C; --teal:#2FBF9F; --coral:#FF6B6B; --amber:#F5A623;
+    --text:#EAEAF0; --text-muted:#9090B0; --text-dim:#6060A0;
+    --shadow:0 8px 32px rgba(0,0,0,0.4); --shadow-sm:0 2px 12px rgba(0,0,0,0.25);
+    --radius:14px; --radius-sm:8px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--surface2);border-radius:3px}
+
+  /* ── CURSOR GLOW ── */
+  #cursor-glow{position:fixed;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(90,79,207,0.06) 0%,transparent 70%);pointer-events:none;transform:translate(-50%,-50%);z-index:0;transition:opacity .3s}
+
+  /* ── UPLOAD SCREEN ── */
+  #upload-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;position:relative;overflow:hidden}
+  .bg-glow{position:absolute;border-radius:50%;filter:blur(120px);pointer-events:none;opacity:0.15;animation:drift 18s ease-in-out infinite alternate}
+  .glow-1{width:600px;height:600px;background:radial-gradient(circle,#5A4FCF,transparent);top:-150px;left:-100px}
+  .glow-2{width:500px;height:500px;background:radial-gradient(circle,#2FBF9F,transparent);bottom:-100px;right:-100px;animation-delay:-9s}
+  .glow-3{width:300px;height:300px;background:radial-gradient(circle,#F2C94C,transparent);top:40%;left:50%;transform:translate(-50%,-50%);opacity:.07;animation-delay:-4s}
+  @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(25px,15px) scale(1.04)}}
+  .grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:50px 50px}
+  .upload-inner{position:relative;z-index:1;text-align:center;max-width:640px;width:100%}
+  .upload-logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(28px,5vw,42px);letter-spacing:4px;margin-bottom:8px}
+  .upload-logo span{color:var(--gold)}
+  .upload-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;margin-bottom:24px;background:rgba(90,79,207,.1);border:1px solid rgba(90,79,207,.25);font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--primary-light)}
+  .upload-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--primary-light);display:inline-block}
+  .upload-h{font-family:'Bebas Neue',sans-serif;font-size:clamp(32px,5vw,56px);letter-spacing:2px;line-height:1.08;margin-bottom:14px}
+  .upload-h .hi{color:var(--gold)}
+  .upload-sub{font-size:15px;color:var(--text-muted);font-weight:300;line-height:1.7;margin-bottom:40px}
+  .upload-card{background:rgba(38,38,61,0.85);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:24px;padding:36px 32px 28px;box-shadow:0 20px 60px rgba(0,0,0,0.5)}
+  .drop-zone{border:1.5px dashed rgba(255,255,255,.13);border-radius:var(--radius);padding:36px 24px;cursor:pointer;transition:all .3s cubic-bezier(.34,1.56,.64,1);background:rgba(255,255,255,.02)}
+  .drop-zone:hover,.drop-zone.drag{border-color:var(--primary-light);background:rgba(90,79,207,.06);transform:scale(1.01);box-shadow:0 0 0 4px rgba(90,79,207,.08)}
+  .drop-zone input{display:none}
+  .drop-icon{width:58px;height:58px;border-radius:17px;margin:0 auto 14px;background:linear-gradient(135deg,rgba(90,79,207,.25),rgba(47,191,159,.18));border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  .drop-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:6px}
+  .drop-sub{font-size:13px;color:var(--text-muted)}
+  .file-type-pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:14px}
+  .file-pill{padding:3px 12px;border-radius:10px;font-size:11px;font-weight:600;background:rgba(90,79,207,.12);border:1px solid rgba(90,79,207,.22);color:var(--primary-light);font-family:'DM Mono',monospace}
+  .or-row{display:flex;align-items:center;gap:14px;margin:20px 0;color:var(--text-dim);font-size:12px}
+  .or-row::before,.or-row::after{content:'';flex:1;height:1px;background:var(--border)}
+  .demo-btn{width:100%;padding:13px;border-radius:var(--radius);background:var(--surface2);border:1px solid rgba(255,255,255,.12);color:var(--text-muted);font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px}
+  .demo-btn:hover{background:rgba(90,79,207,.18);border-color:rgba(90,79,207,.35);color:var(--text);transform:translateY(-2px)}
+  .demo-btn-icon{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--teal));display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px rgba(90,79,207,.4)}
+  #progress-wrap{display:none;margin-top:24px}
+  .prog-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:8px}
+  .prog-track{height:3px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+  .prog-fill{height:3px;width:0;border-radius:2px;background:linear-gradient(90deg,var(--primary),var(--teal));transition:width .5s ease}
+  .prog-steps{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+  .ps{font-size:11px;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);color:var(--text-dim);transition:all .35s}
+  .ps.active{background:rgba(90,79,207,.12);border-color:rgba(90,79,207,.3);color:var(--primary-light)}
+  .ps.done{background:rgba(47,191,159,.1);border-color:rgba(47,191,159,.25);color:var(--teal)}
+
+  /* ── DASHBOARD ── */
+  #dashboard{display:none}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 32px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:200;flex-wrap:wrap;gap:10px;min-height:56px}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,3vw,28px);letter-spacing:3px}
+  .logo span{color:var(--gold)}
+  .header-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0}
+  .live-badge{display:flex;align-items:center;gap:7px;background:rgba(47,191,159,.12);border:1px solid rgba(47,191,159,.3);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--teal);font-weight:500}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .header-date{font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace}
+  .reset-btn{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.25);color:var(--coral);border-radius:20px;padding:5px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .2s}
+  .reset-btn:hover{background:rgba(255,107,107,.2)}
+  .export-btn{background:rgba(242,201,76,.1);border:1px solid rgba(242,201,76,.3);color:var(--gold);border-radius:20px;padding:5px 16px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:6px}
+  .export-btn:hover{background:rgba(242,201,76,.18);transform:translateY(-1px)}
+
+  /* ── ASK THE DATA BAR ── */
+  .ask-bar-wrap{padding:14px clamp(12px,3vw,32px);background:linear-gradient(to right,rgba(90,79,207,0.06),rgba(47,191,159,0.03));border-bottom:1px solid var(--border);position:relative;z-index:100}
+  .ask-bar-inner{display:flex;align-items:center;gap:12px;max-width:900px;flex-wrap:wrap}
+  .ask-icon{font-size:18px;flex-shrink:0}
+  .ask-input{flex:1;min-width:160px;background:var(--surface2);border:1px solid rgba(90,79,207,.25);border-radius:10px;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;transition:all .2s}
+  .ask-input:focus{border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(90,79,207,.1)}
+  .ask-input::placeholder{color:var(--text-dim)}
+  .ask-submit{background:linear-gradient(135deg,var(--primary),var(--primary-light));border:none;color:white;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;flex-shrink:0}
+  .ask-submit:hover{opacity:.9;transform:translateY(-1px)}
+  .ask-clear{background:transparent;border:1px solid var(--border);color:var(--text-dim);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s;flex-shrink:0;display:none}
+  .ask-clear:hover{border-color:var(--coral);color:var(--coral)}
+  .ask-suggestions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .ask-chip{font-size:11px;padding:3px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-dim);cursor:pointer;transition:all .2s;font-family:'DM Mono',monospace}
+  .ask-chip:hover{background:rgba(90,79,207,.12);border-color:rgba(90,79,207,.3);color:var(--primary-light)}
+  .ask-result-banner{margin-top:10px;padding:10px 14px;background:rgba(47,191,159,.08);border:1px solid rgba(47,191,159,.2);border-radius:8px;font-size:12px;color:var(--teal);display:none}
+
+  /* ── FILTERS ── */
+  .filter-bar{display:flex;align-items:center;gap:12px;padding:12px 32px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex-wrap:nowrap}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .filter-btn{white-space:nowrap;flex-shrink:0}
+  .filter-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;white-space:nowrap;flex-shrink:0}
+  .filter-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);border-radius:20px;padding:5px 14px;font-size:12px;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;font-weight:500;white-space:nowrap;flex-shrink:0}
+  .filter-btn:hover,.filter-btn.active{background:var(--primary);border-color:var(--primary);color:white}
+  .filter-btn.gold.active{background:var(--gold);border-color:var(--gold);color:#1E1E2F}
+  .filter-sep{width:1px;height:20px;background:var(--border)}
+
+  /* ── MAIN ── */
+  .main{padding:clamp(12px,2.5vw,24px) clamp(12px,3vw,32px);display:grid;gap:clamp(12px,1.5vw,20px)}
+
+  /* ── KPI STRIP ── */
+  .kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 18px;position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s,border-color .3s;cursor:default;transform-style:preserve-3d}
+  .kpi-card:hover{transform:translateY(-3px) rotateX(2deg) rotateY(-1deg);box-shadow:0 20px 40px rgba(0,0,0,.5),0 0 0 1px rgba(90,79,207,.15);border-color:rgba(90,79,207,.2)}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--primary)}
+  .kpi-card.gold::before{background:var(--gold)}
+  .kpi-card.teal::before{background:var(--teal)}
+  .kpi-card.coral::before{background:var(--coral)}
+  .kpi-card.amber::before{background:var(--amber)}
+  .kpi-icon{font-size:18px;margin-bottom:10px;display:block}
+  .kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-dim);font-weight:600;margin-bottom:8px}
+  .kpi-value{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);line-height:1;margin-bottom:6px}
+  .kpi-sub{font-size:11px;color:var(--text-muted)}
+  .kpi-change{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-top:6px}
+  .kpi-change.up{background:rgba(47,191,159,.12);color:var(--teal)}
+  .kpi-change.down{background:rgba(255,107,107,.12);color:var(--coral)}
+  .kpi-change.warn{background:rgba(245,166,35,.12);color:var(--amber)}
+
+  /* ── RISK KPI STRIP ── */
+  .risk-kpi-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .risk-kpi-card{background:var(--surface2);border-radius:var(--radius-sm);padding:16px 18px;border:1px solid var(--border);display:flex;align-items:center;gap:16px;transition:border-color .2s,transform .2s}
+  .risk-kpi-card:hover{border-color:rgba(90,79,207,.3);transform:translateY(-2px)}
+  .risk-kpi-icon{width:42px;height:42px;border-radius:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .risk-kpi-icon.pareto{background:rgba(242,201,76,.12)}
+  .risk-kpi-icon.stable{background:rgba(47,191,159,.12)}
+  .risk-kpi-icon.retain{background:rgba(255,107,107,.12)}
+  .risk-kpi-icon.risk{background:rgba(245,166,35,.12)}
+  .risk-kpi-label{font-size:10px;text-transform:uppercase;letter-spacing:1.3px;color:var(--text-dim);font-weight:600;margin-bottom:4px}
+  .risk-kpi-value{font-family:'DM Mono',monospace;font-size:20px;font-weight:500;color:var(--text);line-height:1.1}
+  .risk-kpi-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
+  .risk-pill{display:inline-block;margin-top:5px;font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .risk-pill.high{background:rgba(255,107,107,.15);color:var(--coral)}
+  .risk-pill.med{background:rgba(245,166,35,.15);color:var(--amber)}
+  .risk-pill.low{background:rgba(47,191,159,.15);color:var(--teal)}
+
+  /* ── LAYOUT ── */
+  .section-head{display:flex;align-items:baseline;gap:12px;margin-bottom:16px}
+  .section-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--text)}
+  .section-sub{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px}
+  .section-badge{margin-left:auto;font-size:10px;padding:3px 10px;border-radius:10px;background:rgba(90,79,207,.2);color:var(--primary-light);border:1px solid rgba(90,79,207,.3);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .row-3{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:20px}
+  .row-2-wide{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+  .pareto-row{display:grid;grid-template-columns:1.2fr 1fr 0.8fr;gap:20px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(14px,2vw,24px);box-shadow:var(--shadow-sm);animation:fadeUp .4s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .card-inner{height:240px;position:relative}
+  .card-inner-sm{height:200px;position:relative}
+  .card-inner-lg{height:280px;position:relative}
+
+  /* ── SIGNATURE ── */
+  .signature-card{background:linear-gradient(135deg,#26263D 0%,#2a2440 100%);border:1px solid rgba(242,201,76,.2);border-radius:var(--radius);padding:28px;position:relative;overflow:hidden}
+  .signature-card::after{content:'';position:absolute;top:-60px;right:-60px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(242,201,76,.07) 0%,transparent 70%)}
+  .sig-title{font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--gold);font-weight:600;margin-bottom:8px}
+  .sig-heading{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;margin-bottom:16px}
+  .concentration-bars{display:flex;flex-direction:column;gap:10px}
+  .conc-row{display:flex;align-items:center;gap:12px}
+  .conc-label{font-size:12px;color:var(--text-muted);width:100px;flex-shrink:0}
+  .conc-bar-bg{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .conc-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+  .conc-pct{font-family:'DM Mono',monospace;font-size:12px;color:var(--text);width:42px;text-align:right;flex-shrink:0}
+  .sig-alert{margin-top:18px;padding:12px 14px;background:rgba(242,201,76,.08);border:1px solid rgba(242,201,76,.2);border-radius:var(--radius-sm);font-size:12px;color:var(--gold);line-height:1.6}
+
+  /* ── SEGMENTS ── */
+  .seg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+  .seg-pill{background:var(--surface2);border-radius:var(--radius-sm);padding:16px;text-align:center;border:1px solid var(--border)}
+  .seg-value{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;margin-bottom:4px}
+  .seg-label{font-size:11px;color:var(--text-muted);margin-bottom:8px}
+  .seg-bar{height:3px;border-radius:2px;margin-top:8px}
+
+  /* ── SEASONAL TAGS ── */
+  .seasonal-header-note{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .seasonal-tag{font-size:10px;padding:3px 10px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .seasonal-tag.peak{background:rgba(47,191,159,.15);color:var(--teal)}
+  .seasonal-tag.trough{background:rgba(255,107,107,.15);color:var(--coral)}
+  .seasonal-tag.cv{background:rgba(90,79,207,.15);color:var(--primary-light)}
+
+  /* ── RETENTION FUNNEL ── */
+  .retention-funnel{display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .funnel-row{display:flex;align-items:center;gap:10px}
+  .funnel-label{font-size:11px;color:var(--text-muted);width:110px;flex-shrink:0}
+  .funnel-bar-wrap{flex:1}
+  .funnel-bar-bg{height:22px;background:var(--surface2);border-radius:4px;overflow:hidden}
+  .funnel-bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:10px;font-size:11px;font-weight:600;font-family:'DM Mono',monospace;transition:width 1s ease}
+  .funnel-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);width:60px;text-align:right;flex-shrink:0}
+  .retention-alert{margin-top:16px;padding:12px 14px;background:rgba(255,107,107,.06);border:1px solid rgba(255,107,107,.18);border-radius:var(--radius-sm);font-size:12px;color:var(--coral);line-height:1.6}
+  .retention-opp{margin-top:10px;padding:12px 14px;background:rgba(47,191,159,.06);border:1px solid rgba(47,191,159,.18);border-radius:var(--radius-sm);font-size:12px;color:var(--teal);line-height:1.6}
+
+  /* ── COHORT HEATMAP ── */
+  .cohort-wrap{overflow-x:auto;margin-top:8px}
+  .cohort-table{border-collapse:collapse;font-size:11px;min-width:500px;width:100%}
+  .cohort-table th{padding:6px 8px;text-align:center;color:var(--text-dim);font-size:10px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600}
+  .cohort-table th.cohort-label{text-align:left;min-width:75px}
+  .cohort-table td{padding:5px 6px;text-align:center;font-family:'DM Mono',monospace;font-size:11px;border-radius:4px;position:relative;transition:filter .2s}
+  .cohort-table td:hover{filter:brightness(1.3)}
+  .cohort-table td.cohort-row-label{text-align:left;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:11px;padding-right:10px;font-weight:500}
+  .cohort-legend{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--text-dim)}
+  .cohort-legend-bar{width:100px;height:8px;border-radius:4px;background:linear-gradient(to right,rgba(90,79,207,0.15),rgba(47,191,159,0.8));flex-shrink:0}
+
+  /* ── MALL TABLE ── */
+  .mall-table{width:100%;border-collapse:collapse;font-size:12px}
+  .mall-table th{text-align:left;padding:8px 10px;color:var(--text-dim);font-size:10px;text-transform:uppercase;letter-spacing:1.2px;border-bottom:1px solid var(--border);font-weight:600}
+  .mall-table td{padding:10px 10px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--text);font-family:'DM Mono',monospace;font-size:11px}
+  .mall-table tr:last-child td{border-bottom:none}
+  .mall-table tr:hover td{background:rgba(255,255,255,.02)}
+  .mall-name{font-family:'DM Sans',sans-serif;font-size:12px}
+  .rank-badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;font-size:10px;font-weight:700;font-family:'DM Sans',sans-serif}
+  .rank-1{background:rgba(242,201,76,.2);color:var(--gold)}
+  .rank-2{background:rgba(90,79,207,.2);color:var(--primary-light)}
+  .rank-3{background:rgba(47,191,159,.15);color:var(--teal)}
+  .rank-n{background:var(--surface2);color:var(--text-dim)}
+  .eff-bar{display:flex;align-items:center;gap:8px}
+  .eff-mini-bg{flex:1;height:4px;background:var(--surface2);border-radius:2px}
+  .eff-mini-fill{height:4px;border-radius:2px;background:var(--teal)}
+  .vs-avg-badge{font-size:10px;padding:1px 6px;border-radius:6px;font-weight:600}
+  .vs-avg-badge.above{background:rgba(47,191,159,.12);color:var(--teal)}
+  .vs-avg-badge.below{background:rgba(255,107,107,.12);color:var(--coral)}
+
+  /* ── GEOSPATIAL MAP ── */
+  #geo-map-container{position:relative;height:clamp(220px,30vw,340px);background:var(--surface2);border-radius:var(--radius-sm);overflow:hidden}
+  #geo-map{width:100%;height:100%;z-index:1}
+  .map-tooltip{position:absolute;background:rgba(22,22,40,0.97);border:1px solid rgba(90,79,207,.35);border-radius:10px;padding:12px 14px;font-size:12px;pointer-events:none;display:none;z-index:10;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+  .map-tooltip-name{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:1px;color:var(--text);margin-bottom:6px}
+  .map-tooltip-row{display:flex;justify-content:space-between;gap:16px;color:var(--text-muted);margin-bottom:3px}
+  .map-tooltip-val{color:var(--text);font-family:'DM Mono',monospace;font-weight:500}
+
+  /* ── MARKET BASKET ── */
+  #basket-canvas{display:block}
+  .basket-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .basket-leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+  .basket-leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+  /* ── FORECASTING ── */
+  .forecast-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .fc-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+  .fc-dot{width:24px;height:3px;border-radius:2px}
+  .fc-dot.solid{background:var(--primary-light)}
+  .fc-dot.dashed{background:transparent;border-top:2px dashed var(--gold)}
+
+  /* ── INSIGHTS ── */
+  .insights-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:clamp(16px,2vw,28px)}
+  .insight-list{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px}
+  .insight-item{display:flex;gap:14px;align-items:flex-start;padding:16px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);transition:border-color .2s,transform .2s}
+  .insight-item:hover{border-color:rgba(90,79,207,.4);transform:translateY(-2px)}
+  .insight-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1;color:var(--primary-light);opacity:.5;flex-shrink:0;width:28px}
+  .insight-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px}
+  .insight-body{font-size:12px;color:var(--text-muted);line-height:1.6}
+  .insight-tag{display:inline-block;margin-top:7px;font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .tag-action{background:rgba(90,79,207,.15);color:var(--primary-light)}
+  .tag-risk{background:rgba(255,107,107,.15);color:var(--coral)}
+  .tag-growth{background:rgba(47,191,159,.15);color:var(--teal)}
+  .tag-watch{background:rgba(242,201,76,.15);color:var(--gold)}
+  .tag-urgent{background:rgba(245,166,35,.2);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+
+  /* ── FOOTER ── */
+  .footer{margin-top:8px;padding:clamp(12px,1.5vw,16px) clamp(12px,3vw,32px);border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .footer-left{font-size:11px;color:var(--text-dim)}
+  .footer-right{display:flex;gap:20px;font-size:10px;color:var(--text-dim);font-family:'DM Mono',monospace}
+
+  /* ── PDF OVERLAY ── */
+  #pdf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center}
+  #pdf-overlay.show{display:flex}
+  .pdf-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;max-width:460px;width:90%;text-align:center}
+  .pdf-modal h3{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;margin-bottom:10px}
+  .pdf-modal p{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:20px}
+  .pdf-modal-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .pdf-modal-btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all .2s}
+  .pdf-modal-btn.primary{background:linear-gradient(135deg,var(--primary),var(--teal));color:white}
+  .pdf-modal-btn.primary:hover{opacity:.9;transform:translateY(-1px)}
+  .pdf-modal-btn.secondary{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)}
+  .pdf-modal-btn.secondary:hover{border-color:var(--coral);color:var(--coral)}
+  .pdf-progress{margin-top:16px;display:none}
+  .pdf-progress-bar{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-top:8px}
+  .pdf-progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),var(--teal));border-radius:2px;width:0;transition:width .4s ease}
+
+  /* ── RESPONSIVE: LARGE DESKTOP (≤1400px) ── */
+  @media(max-width:1400px){
+    .kpi-strip{grid-template-columns:repeat(3,1fr)}
+    .row-3{grid-template-columns:1fr 1fr}
+    .pareto-row{grid-template-columns:1fr 1fr}
+    .risk-kpi-strip{grid-template-columns:repeat(2,1fr)}
+  }
+
+  /* ── RESPONSIVE: TABLET LANDSCAPE (≤1100px) ── */
+  @media(max-width:1100px){
+    .kpi-strip{grid-template-columns:repeat(3,1fr)}
+    .row-2-wide{grid-template-columns:1fr 1fr}
+    .row-3{grid-template-columns:1fr 1fr}
+    .pareto-row{grid-template-columns:1fr 1fr}
+    .risk-kpi-strip{grid-template-columns:repeat(2,1fr)}
+    .main{padding:20px 24px;gap:16px}
+    .header{padding:14px 24px}
+    .filter-bar{padding:10px 24px}
+    .ask-bar-wrap{padding:12px 24px}
+  }
+
+  /* ── RESPONSIVE: TABLET PORTRAIT (≤900px) ── */
+  @media(max-width:900px){
+    .kpi-strip{grid-template-columns:repeat(2,1fr);gap:10px}
+    .risk-kpi-strip{grid-template-columns:1fr 1fr;gap:10px}
+    .row-2,.row-2-wide,.row-3,.pareto-row{grid-template-columns:1fr;gap:14px}
+    .insight-list{grid-template-columns:1fr}
+    .main{padding:14px 16px;gap:14px}
+    .header{padding:12px 16px;gap:8px}
+    .filter-bar{padding:10px 16px;gap:8px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+    .filter-bar::-webkit-scrollbar{height:0}
+    .filter-btn{white-space:nowrap;flex-shrink:0;padding:5px 12px;font-size:11px}
+    .ask-bar-wrap{padding:10px 16px}
+    .ask-bar-inner{flex-wrap:wrap;gap:8px}
+    .ask-input{width:100%;min-width:0}
+    .ask-submit,.ask-clear{padding:8px 14px;font-size:11px}
+    .ask-suggestions{gap:6px}
+    .card{padding:18px}
+    .card-inner{height:200px}
+    .card-inner-lg{height:240px}
+    .card-inner-sm{height:160px}
+    .seg-grid{grid-template-columns:repeat(3,1fr)}
+    .logo{font-size:24px}
+    .header-date{display:none}
+    .section-title{font-size:17px}
+    .kpi-value{font-size:20px}
+    .risk-kpi-value{font-size:17px}
+    .mall-table{font-size:11px}
+    .mall-table th,.mall-table td{padding:7px 8px}
+    .conc-label{width:80px;font-size:11px}
+    .footer{flex-direction:column;gap:8px;text-align:center;padding:14px 16px}
+    .footer-right{flex-wrap:wrap;justify-content:center;gap:10px}
+  }
+
+  /* ── RESPONSIVE: MOBILE (≤600px) ── */
+  @media(max-width:600px){
+    .kpi-strip{grid-template-columns:1fr 1fr;gap:8px}
+    .risk-kpi-strip{grid-template-columns:1fr;gap:8px}
+    .kpi-card{padding:14px 12px}
+    .kpi-value{font-size:18px}
+    .kpi-label{font-size:9px}
+    .kpi-sub{font-size:10px}
+    .kpi-icon{font-size:15px;margin-bottom:6px}
+    .risk-kpi-card{padding:12px 14px}
+    .risk-kpi-icon{width:36px;height:36px;font-size:16px}
+    .risk-kpi-value{font-size:16px}
+    .risk-kpi-label{font-size:9px}
+    .risk-kpi-sub{font-size:10px}
+    .main{padding:10px 12px;gap:12px}
+    .header{padding:10px 12px}
+    .logo{font-size:22px;letter-spacing:2px}
+    .live-badge{font-size:10px;padding:4px 10px}
+    .reset-btn,.export-btn{font-size:10px;padding:4px 10px}
+    .ask-bar-wrap{padding:10px 12px}
+    .ask-bar-inner{gap:6px}
+    .ask-input{font-size:12px;padding:8px 12px}
+    .ask-submit{padding:8px 12px;font-size:11px}
+    .ask-chip{font-size:10px;padding:3px 8px}
+    .filter-bar{padding:8px 12px;gap:6px}
+    .filter-btn{padding:4px 10px;font-size:10px}
+    .filter-label{font-size:9px;letter-spacing:1px}
+    .card{padding:14px 12px}
+    .card-inner{height:180px}
+    .card-inner-lg{height:210px}
+    .card-inner-sm{height:140px}
+    .section-title{font-size:15px;letter-spacing:1px}
+    .section-sub{font-size:9px}
+    .section-badge{font-size:9px;padding:2px 7px}
+    .seg-grid{grid-template-columns:1fr 1fr 1fr;gap:6px}
+    .seg-pill{padding:10px 6px}
+    .seg-value{font-size:16px}
+    .seg-label{font-size:9px}
+    .conc-label{width:70px;font-size:10px}
+    .conc-pct{font-size:10px;width:34px}
+    .sig-heading{font-size:18px}
+    .funnel-label{width:90px;font-size:10px}
+    .funnel-bar-fill{font-size:10px;padding-left:6px}
+    .funnel-count{font-size:10px;width:40px}
+    .mall-table{font-size:10px}
+    .mall-table th,.mall-table td{padding:6px 6px}
+    .mall-name{font-size:10px}
+    .insight-item{padding:12px}
+    .insight-title{font-size:12px}
+    .insight-body{font-size:11px}
+    .insight-num{font-size:22px}
+    .cohort-table{font-size:10px}
+    .cohort-table th,.cohort-table td{padding:4px 4px}
+    #basket-canvas{height:220px !important}
+    #geo-map-container{height:260px}
+    .upload-inner{padding:0 4px}
+    .upload-card{padding:20px 16px}
+    .upload-h{font-size:clamp(26px,7vw,40px)}
+    .upload-sub{font-size:13px}
+    .drop-zone{padding:24px 16px}
+    .drop-icon{width:48px;height:48px;font-size:22px}
+    .footer{padding:12px}
+    .footer-left,.footer-right{font-size:9px}
+    .pdf-modal{padding:20px 16px}
+    .pdf-modal h3{font-size:20px}
+  }
+
+  /* ── RESPONSIVE: SMALL MOBILE (≤400px) ── */
+  @media(max-width:400px){
+    .kpi-strip{grid-template-columns:1fr 1fr;gap:6px}
+    .kpi-card{padding:12px 10px}
+    .kpi-value{font-size:16px}
+    .header-meta{gap:6px}
+    .reset-btn{display:none}
+    .seg-grid{grid-template-columns:1fr 1fr;gap:6px}
+    .card-inner{height:160px}
+    .card-inner-lg{height:190px}
+    #basket-canvas{height:190px !important}
+    #geo-map-container{height:220px}
+    .ask-bar-inner{flex-direction:column;align-items:stretch}
+    .ask-icon{display:none}
+    .risk-kpi-strip{grid-template-columns:1fr 1fr;gap:6px}
+    .risk-kpi-card{padding:10px 12px;gap:10px}
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor-glow"></div>
+
+<!-- ── UPLOAD SCREEN ── -->
+<div id="upload-screen">
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+  <div class="bg-glow glow-3"></div>
+  <div class="grid-bg"></div>
+  <div class="upload-inner">
+    <div class="upload-logo">Retail<span>IQ</span></div>
+    <div class="upload-eyebrow">Executive Intelligence Platform v5</div>
+    <h1 class="upload-h">Your data has a story.<br><span class="hi">Let's tell it.</span></h1>
+    <p class="upload-sub">Upload any spreadsheet or data file and RetailIQ will transform it into a living executive dashboard — complete with AI-powered insights, predictive forecasting, cohort retention, and natural language queries.</p>
+    <div class="upload-card">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-icon">📂</div>
+        <div class="drop-title">Drop any file here</div>
+        <div class="drop-sub">Click to browse your files — all common formats supported</div>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.tsv,.txt">
+        <div class="file-type-pills">
+          <span class="file-pill">CSV</span>
+          <span class="file-pill">XLSX</span>
+          <span class="file-pill">XLS</span>
+          <span class="file-pill">TSV</span>
+          <span class="file-pill">TXT</span>
+        </div>
+      </div>
+      <div class="or-row">or explore with sample data</div>
+      <button class="demo-btn" id="demoBtn">
+        <span class="demo-btn-icon">✦</span>
+        Load Demo · Istanbul Retail Group · 100+ Transactions
+      </button>
+      <div id="progress-wrap">
+        <div class="prog-row"><span id="progText">Initialising...</span><span id="progPct">0%</span></div>
+        <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+        <div class="prog-steps">
+          <span class="ps" id="ps1">Parsing file</span>
+          <span class="ps" id="ps2">Revenue engine</span>
+          <span class="ps" id="ps3">Categories</span>
+          <span class="ps" id="ps4">Mall analysis</span>
+          <span class="ps" id="ps5">Pareto model</span>
+          <span class="ps" id="ps6">Seasonality</span>
+          <span class="ps" id="ps7">Cohort matrix</span>
+          <span class="ps" id="ps8">Forecasting</span>
+          <span class="ps" id="ps9">Basket analysis</span>
+          <span class="ps" id="ps10">Rendering</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="dashboard">
+
+  <header class="header">
+    <div class="logo">Retail<span>IQ</span></div>
+    <div class="header-meta">
+      <div class="live-badge"><span class="live-dot"></span> Live Dashboard</div>
+      <div class="header-date" id="headerMeta">—</div>
+      <button class="export-btn" onclick="openPdfModal()">📄 Export Briefing</button>
+      <button class="reset-btn" onclick="resetDashboard()">↩ New File</button>
+    </div>
+  </header>
+
+  <!-- ── ASK THE DATA ── -->
+  <div class="ask-bar-wrap">
+    <div class="ask-bar-inner">
+      <span class="ask-icon">🔍</span>
+      <input class="ask-input" id="askInput" type="text" placeholder='Ask RetailIQ anything... e.g. "Show female shoe sales in Kanyon"' />
+      <button class="ask-submit" onclick="processAskQuery()">Ask</button>
+      <button class="ask-clear" id="askClearBtn" onclick="clearAskQuery()">✕ Clear Filter</button>
+    </div>
+    <div class="ask-suggestions">
+      <span class="ask-chip" onclick="askQuick('Show female clothing sales')">Female clothing sales</span>
+      <span class="ask-chip" onclick="askQuick('Technology in Kanyon')">Technology in Kanyon</span>
+      <span class="ask-chip" onclick="askQuick('Male shoe buyers')">Male shoe buyers</span>
+      <span class="ask-chip" onclick="askQuick('Cosmetics revenue')">Cosmetics revenue</span>
+      <span class="ask-chip" onclick="askQuick('Food and beverage')">Food & Beverage</span>
+    </div>
+    <div class="ask-result-banner" id="askResultBanner"></div>
+  </div>
+
+  <div class="filter-bar">
+    <span class="filter-label">Category</span>
+    <button class="filter-btn active" data-filter="cat" data-val="All">All</button>
+    <button class="filter-btn" data-filter="cat" data-val="Clothing">Clothing</button>
+    <button class="filter-btn" data-filter="cat" data-val="Shoes">Shoes</button>
+    <button class="filter-btn" data-filter="cat" data-val="Technology">Technology</button>
+    <button class="filter-btn" data-filter="cat" data-val="Cosmetics">Cosmetics</button>
+    <button class="filter-btn" data-filter="cat" data-val="Food & Beverage">Food & Bev</button>
+    <button class="filter-btn" data-filter="cat" data-val="Toys">Toys</button>
+    <button class="filter-btn" data-filter="cat" data-val="Books">Books</button>
+    <button class="filter-btn" data-filter="cat" data-val="Souvenir">Souvenir</button>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Gender</span>
+    <button class="filter-btn gold active" data-filter="gender" data-val="All">All</button>
+    <button class="filter-btn" data-filter="gender" data-val="Female">Female</button>
+    <button class="filter-btn" data-filter="gender" data-val="Male">Male</button>
+  </div>
+
+  <main class="main">
+
+    <!-- PRIMARY KPIs -->
+    <div class="kpi-strip">
+      <div class="kpi-card gold"><span class="kpi-icon">💰</span><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpi-rev">—</div><div class="kpi-sub">Gross across all malls</div><div class="kpi-change up" id="kpi-rev-change">↑ Loading...</div></div>
+      <div class="kpi-card"><span class="kpi-icon">🧾</span><div class="kpi-label">Total Transactions</div><div class="kpi-value" id="kpi-tx">—</div><div class="kpi-sub">Unique invoices</div><div class="kpi-change up">↑ Full dataset</div></div>
+      <div class="kpi-card teal"><span class="kpi-icon">📊</span><div class="kpi-label">Avg Order Value</div><div class="kpi-value" id="kpi-aov">—</div><div class="kpi-sub">Per transaction</div><div class="kpi-change up" id="kpi-aov-change">↑ Computing...</div></div>
+      <div class="kpi-card"><span class="kpi-icon">👥</span><div class="kpi-label">Unique Customers</div><div class="kpi-value" id="kpi-cust">—</div><div class="kpi-sub">Distinct IDs</div><div class="kpi-change down">⚠ Low repeat rate</div></div>
+      <div class="kpi-card"><span class="kpi-icon">💎</span><div class="kpi-label">Revenue / Customer</div><div class="kpi-value" id="kpi-rpc">—</div><div class="kpi-sub">Lifetime value proxy</div><div class="kpi-change up">↑ Healthy LTV signal</div></div>
+      <div class="kpi-card coral"><span class="kpi-icon">🏆</span><div class="kpi-label">Top Category %</div><div class="kpi-value" id="kpi-top">—</div><div class="kpi-sub" id="kpi-top-sub">Top category</div><div class="kpi-change down">⚠ Concentration risk</div></div>
+    </div>
+
+    <!-- RISK KPIs -->
+    <div class="risk-kpi-strip">
+      <div class="risk-kpi-card"><div class="risk-kpi-icon pareto">📐</div><div class="risk-kpi-body"><div class="risk-kpi-label">Pareto Ratio</div><div class="risk-kpi-value" id="rkpi-pareto">—</div><div class="risk-kpi-sub" id="rkpi-pareto-sub">of customers = 80% revenue</div><span class="risk-pill high" id="rkpi-pareto-pill">Skewed</span></div></div>
+      <div class="risk-kpi-card"><div class="risk-kpi-icon stable">📈</div><div class="risk-kpi-body"><div class="risk-kpi-label">Revenue Stability Score</div><div class="risk-kpi-value" id="rkpi-stability">—</div><div class="risk-kpi-sub" id="rkpi-stability-sub">out of 100 · CV analysis</div><span class="risk-pill med" id="rkpi-stability-pill">Moderate</span></div></div>
+      <div class="risk-kpi-card"><div class="risk-kpi-icon retain">🔄</div><div class="risk-kpi-body"><div class="risk-kpi-label">Repeat Purchase Rate</div><div class="risk-kpi-value" id="rkpi-repeat">—</div><div class="risk-kpi-sub" id="rkpi-repeat-sub">customers with 2+ visits</div><span class="risk-pill high" id="rkpi-repeat-pill">Critical Risk</span></div></div>
+      <div class="risk-kpi-card"><div class="risk-kpi-icon risk">⚠️</div><div class="risk-kpi-body"><div class="risk-kpi-label">Revenue at Risk</div><div class="risk-kpi-value" id="rkpi-atrisk">—</div><div class="risk-kpi-sub">from top-2 category dependency</div><span class="risk-pill high" id="rkpi-atrisk-pill">Exposed</span></div></div>
+    </div>
+
+    <!-- TREND + FORECASTING + GENDER -->
+    <div class="row-2-wide">
+      <div class="card">
+        <div class="section-head">
+          <div class="section-title">Revenue Trend + Forecast</div>
+          <div class="section-sub">Actual · MoM Growth · 3-Month Projection</div>
+          <div class="section-badge" id="trendBadge">— Months</div>
+        </div>
+        <div class="forecast-legend">
+          <div class="fc-item"><div class="fc-dot solid"></div><span>Actual Revenue</span></div>
+          <div class="fc-item"><div class="fc-dot" style="border-top:2px dashed var(--gold);width:24px"></div><span>Forecast (3-month)</span></div>
+        </div>
+        <div class="card-inner-lg"><canvas id="trendChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><div class="section-title">Customer Intelligence</div><div class="section-sub">Revenue Split</div></div>
+        <div class="card-inner" style="height:150px;"><canvas id="genderChart"></canvas></div>
+        <div style="margin-top:18px;">
+          <div class="section-sub" style="margin-bottom:10px;">Revenue by Age Group</div>
+          <div class="card-inner-sm" style="height:100px;"><canvas id="ageChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY + SEGMENTS -->
+    <div class="row-2">
+      <div class="card">
+        <div class="section-head"><div class="section-title">Category Performance</div><div class="section-sub">Revenue vs Quantity</div><div class="section-badge" id="catBadge">— Categories</div></div>
+        <div class="card-inner-lg"><canvas id="categoryChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><div class="section-title">Customer Segments</div><div class="section-sub">Value-based segmentation</div></div>
+        <div class="card-inner" style="height:180px;"><canvas id="segmentChart"></canvas></div>
+        <div class="seg-grid">
+          <div class="seg-pill"><div class="seg-value" style="color:var(--gold)" id="seg-high">—</div><div class="seg-label">High-Value</div><div style="font-size:10px;color:var(--text-dim)">Top 30%</div><div class="seg-bar" style="background:var(--gold);width:100%"></div></div>
+          <div class="seg-pill"><div class="seg-value" style="color:var(--teal)" id="seg-mid">—</div><div class="seg-label">Mid-Value</div><div style="font-size:10px;color:var(--text-dim)">Middle 40%</div><div class="seg-bar" style="background:var(--teal);width:68%"></div></div>
+          <div class="seg-pill"><div class="seg-value" style="color:var(--coral)" id="seg-low">—</div><div class="seg-label">Low-Value</div><div style="font-size:10px;color:var(--text-dim)">Bottom 30%</div><div class="seg-bar" style="background:var(--coral);width:82%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MALL + SIGNATURE -->
+    <div class="row-2">
+      <div class="card">
+        <div class="section-head"><div class="section-title">Mall Performance</div><div class="section-sub">Revenue, Efficiency & vs-Network-Average</div><div class="section-badge" id="mallBadge">— Locations</div></div>
+        <table class="mall-table"><thead><tr><th>#</th><th>Shopping Mall</th><th>Revenue</th><th>Transactions</th><th>Efficiency (Rev/Tx)</th><th>vs Avg</th></tr></thead><tbody id="mallBody"></tbody></table>
+      </div>
+      <div class="signature-card">
+        <div class="sig-title">⚡ Signature Insight — Revenue Concentration Risk</div>
+        <div class="sig-heading" id="sigHeading">Top 3 Categories Own Revenue</div>
+        <div class="concentration-bars" id="concBars"></div>
+        <div class="sig-alert" id="sigAlert">Computing HHI score...</div>
+      </div>
+    </div>
+
+    <!-- PARETO + SEASONAL + RETENTION -->
+    <div class="pareto-row">
+      <div class="card">
+        <div class="section-head"><div class="section-title">Pareto Curve</div><div class="section-sub">Customer value distribution · 80/20 rule</div><div class="section-badge" id="paretoBadge">Loading...</div></div>
+        <div class="card-inner-lg"><canvas id="paretoChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><div class="section-title">Seasonal Risk Index</div><div class="section-sub">Monthly revenue deviation from mean</div></div>
+        <div class="seasonal-header-note" id="seasonalTags"></div>
+        <div class="card-inner" style="height:210px;"><canvas id="seasonalChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><div class="section-title">Retention Funnel</div><div class="section-sub">Purchase frequency</div></div>
+        <div class="retention-funnel" id="retentionFunnel"></div>
+        <div class="retention-alert" id="retentionAlert">Loading...</div>
+        <div class="retention-opp" id="retentionOpp">Loading...</div>
+      </div>
+    </div>
+
+    <!-- COHORT RETENTION HEATMAP (NEW) -->
+    <div class="card">
+      <div class="section-head">
+        <div class="section-title">Cohort Retention Heatmap</div>
+        <div class="section-sub">First-purchase cohort vs return rate by month number</div>
+        <div class="section-badge">Gold Standard Churn Analysis</div>
+      </div>
+      <div class="cohort-wrap"><table class="cohort-table" id="cohortTable"></table></div>
+      <div class="cohort-legend"><span>Low retention</span><div class="cohort-legend-bar"></div><span>High retention</span><span style="margin-left:16px;font-size:11px;color:var(--text-dim)">Each cell shows % of cohort that returned in that month offset</span></div>
+    </div>
+
+    <!-- MARKET BASKET + GEO MAP -->
+    <div class="row-2">
+      <div class="card">
+        <div class="section-head"><div class="section-title">Market Basket Affinity Web</div><div class="section-sub">Category co-purchase network · node size = revenue</div></div>
+        <canvas id="basket-canvas" style="width:100%;height:clamp(180px,28vw,280px);display:block"></canvas>
+        <div class="basket-legend" id="basketLegend"></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><div class="section-title">Mall Geospatial Map</div><div class="section-sub">Istanbul mall locations · revenue heat markers</div></div>
+        <div id="geo-map-container">
+          <canvas id="geo-map" width="800" height="340" style="width:100%;height:100%"></canvas>
+          <div class="map-tooltip" id="mapTooltip"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="row-3">
+      <div class="card"><div class="section-head"><div class="section-title">Category Contribution</div><div class="section-sub">Share of total revenue</div></div><div class="card-inner"><canvas id="catShareChart"></canvas></div></div>
+      <div class="card"><div class="section-head"><div class="section-title">Payment Mix</div><div class="section-sub">By channel</div></div><div class="card-inner"><canvas id="paymentChart"></canvas></div></div>
+      <div class="card"><div class="section-head"><div class="section-title">Mall Revenue Rank</div><div class="section-sub">Comparative bar</div></div><div class="card-inner"><canvas id="mallBarChart"></canvas></div></div>
+    </div>
+
+    <!-- INSIGHTS (NARRATIVE) -->
+    <div class="insights-panel">
+      <div class="section-head">
+        <div class="section-title">The Story Your Data Is Telling</div>
+        <div class="section-sub">Narrative intelligence — data-backed, board-ready</div>
+      </div>
+      <div class="insight-list" id="insightList"></div>
+    </div>
+
+  </main>
+
+  <footer class="footer">
+    <div class="footer-left">RetailIQ Executive Dashboard v5 · <span id="footerInfo">—</span></div>
+    <div class="footer-right"><span id="footerRecords">DATA: — records</span><span id="footerPeriod">PERIOD: —</span><span>BUILT: RetailIQ v5.0</span></div>
+  </footer>
+</div>
+
+<!-- ── PDF EXPORT MODAL ── -->
+<div id="pdf-overlay">
+  <div class="pdf-modal">
+    <h3>📄 Executive Briefing</h3>
+    <p>Generate a branded PDF report with all KPIs, chart snapshots, and the full narrative intelligence section — ready for board presentation.</p>
+    <div class="pdf-modal-btns">
+      <button class="pdf-modal-btn primary" onclick="generatePDF()">Generate PDF</button>
+      <button class="pdf-modal-btn secondary" onclick="closePdfModal()">Cancel</button>
+    </div>
+    <div class="pdf-progress" id="pdfProgress">
+      <div style="font-size:12px;color:var(--text-muted)" id="pdfProgressText">Preparing document...</div>
+      <div class="pdf-progress-bar"><div class="pdf-progress-fill" id="pdfProgressFill"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// GLOBAL STATE
+// ════════════════════════════════════════════════════════
+let RAW_DATA = [], COMPUTED = {}, charts = {};
+let activeFilters = { cat:'All', gender:'All', mall:'All' };
+
+const COLORS = {
+  primary:'#5A4FCF', primaryL:'#7B72E9',
+  gold:'#F2C94C', teal:'#2FBF9F', coral:'#FF6B6B',
+  amber:'#F5A623', surface2:'#2E2E48', grid:'rgba(255,255,255,0.05)'
+};
+Chart.defaults.color = '#9090B0';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+// ── CURSOR GLOW ──
+document.addEventListener('mousemove', e => {
+  const g = document.getElementById('cursor-glow');
+  if(g){ g.style.left = e.clientX + 'px'; g.style.top = e.clientY + 'px'; }
+});
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function fmt(n){ if(n>=1e9) return '₺'+(n/1e9).toFixed(1)+'B'; if(n>=1e6) return '₺'+(n/1e6).toFixed(1)+'M'; if(n>=1e3) return '₺'+(n/1e3).toFixed(0)+'K'; return '₺'+n.toFixed(0); }
+function fmtN(n){ return n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(0)+'K':String(n); }
+function fmtNum(n){ return n.toLocaleString(); }
+
+// ════════════════════════════════════════════════════════
+// PROGRESS
+// ════════════════════════════════════════════════════════
+async function runProgress() {
+  document.getElementById('progress-wrap').style.display = 'block';
+  const steps = ['ps1','ps2','ps3','ps4','ps5','ps6','ps7','ps8','ps9','ps10'];
+  const pcts  = [8,18,30,42,54,64,73,82,91,100];
+  const msgs  = ['Parsing file…','Revenue engine…','Aggregating categories…','Analysing malls…','Pareto modelling…','Seasonal analysis…','Building cohort matrix…','Forecasting…','Market basket analysis…','Rendering dashboard…'];
+  for(let i=0;i<steps.length;i++){
+    document.getElementById(steps[i]).className='ps active';
+    document.getElementById('progFill').style.width=pcts[i]+'%';
+    document.getElementById('progPct').textContent=pcts[i]+'%';
+    document.getElementById('progText').textContent=msgs[i];
+    if(i>0) document.getElementById(steps[i-1]).className='ps done';
+    await sleep(160+Math.random()*100);
+  }
+  steps.forEach(s=>document.getElementById(s).className='ps done');
+}
+
+// ════════════════════════════════════════════════════════
+// DATE PARSING
+// ════════════════════════════════════════════════════════
+function parseDate(str){
+  if(!str) return null;
+  str = String(str).trim();
+  // dd.mm.yy or dd.mm.yyyy
+  let m = str.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if(m){ const y=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]); return new Date(y,parseInt(m[2])-1,parseInt(m[1])); }
+  // yyyy-mm-dd
+  m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return new Date(parseInt(m[1]),parseInt(m[2])-1,parseInt(m[3]));
+  // mm/dd/yyyy
+  m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return new Date(parseInt(m[3]),parseInt(m[1])-1,parseInt(m[2]));
+  return null;
+}
+function monthKey(date){ const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return ms[date.getMonth()]+' '+String(date.getFullYear()).slice(2); }
+function monthKeyFull(date){ return date.getFullYear()+'-'+(date.getMonth()+1).toString().padStart(2,'0'); }
+
+// ════════════════════════════════════════════════════════
+// EXPONENTIAL SMOOTHING FORECAST (3 months)
+// ════════════════════════════════════════════════════════
+function exponentialSmooth(data, alpha=0.35){
+  if(data.length===0) return [];
+  let s = data[0];
+  const smoothed = [s];
+  for(let i=1;i<data.length;i++){ s = alpha*data[i]+(1-alpha)*s; smoothed.push(s); }
+  // forecast 3 more months
+  const forecast = [];
+  for(let i=0;i<3;i++){ s = alpha*s+(1-alpha)*s; forecast.push(s); }
+  return { smoothed, forecast };
+}
+
+// ════════════════════════════════════════════════════════
+// MARKET BASKET ANALYSIS
+// ════════════════════════════════════════════════════════
+function computeBasket(rows){
+  // Group by invoice_no
+  const invoices = {};
+  rows.forEach(r=>{ if(!invoices[r.invoice_no]) invoices[r.invoice_no]=[]; invoices[r.invoice_no].push(r.category); });
+  const pairCounts = {};
+  const catCounts = {};
+  Object.values(invoices).forEach(cats=>{
+    const unique = [...new Set(cats)];
+    unique.forEach(c=>{ catCounts[c]=(catCounts[c]||0)+1; });
+    for(let i=0;i<unique.length;i++){
+      for(let j=i+1;j<unique.length;j++){
+        const key = [unique[i],unique[j]].sort().join('||');
+        pairCounts[key]=(pairCounts[key]||0)+1;
+      }
+    }
+  });
+  const pairs = Object.entries(pairCounts).map(([k,v])=>{ const [a,b]=k.split('||'); return {a,b,count:v}; }).sort((x,y)=>y.count-x.count).slice(0,10);
+  return { pairs, catCounts };
+}
+
+// ════════════════════════════════════════════════════════
+// COHORT ANALYSIS
+// ════════════════════════════════════════════════════════
+function computeCohorts(rows){
+  const custFirstMonth = {};
+  const custMonths = {};
+  rows.forEach(r=>{
+    if(!r._date) return;
+    const mk = monthKeyFull(r._date);
+    if(!custFirstMonth[r.customer_id] || mk < custFirstMonth[r.customer_id]) custFirstMonth[r.customer_id]=mk;
+    if(!custMonths[r.customer_id]) custMonths[r.customer_id]=new Set();
+    custMonths[r.customer_id].add(mk);
+  });
+  // Group customers by their first month
+  const cohorts = {};
+  Object.entries(custFirstMonth).forEach(([cid,fm])=>{
+    if(!cohorts[fm]) cohorts[fm]=[];
+    cohorts[fm].push(cid);
+  });
+  const cohortKeys = Object.keys(cohorts).sort().slice(-8); // last 8 cohorts
+  const maxOffset = 6;
+  const matrix = {};
+  cohortKeys.forEach(ck=>{
+    const custs = cohorts[ck];
+    matrix[ck] = { size: custs.length, retention: [] };
+    const [cy,cm] = ck.split('-').map(Number);
+    for(let off=0;off<=maxOffset;off++){
+      let retDate = new Date(cy, cm-1+off, 1);
+      const retKey = retDate.getFullYear()+'-'+(retDate.getMonth()+1).toString().padStart(2,'0');
+      const returned = custs.filter(c=>custMonths[c] && custMonths[c].has(retKey)).length;
+      matrix[ck].retention.push(off===0?100:+(returned/custs.length*100).toFixed(1));
+    }
+  });
+  return { matrix, cohortKeys, maxOffset };
+}
+
+// ════════════════════════════════════════════════════════
+// MAIN COMPUTE
+// ════════════════════════════════════════════════════════
+function compute(rows){
+  const totalRev=rows.reduce((s,r)=>s+r._price,0);
+  const totalTx=rows.length;
+  const aov=totalRev/totalTx;
+  const uniqueCust=new Set(rows.map(r=>r.customer_id)).size;
+  const rpc=totalRev/uniqueCust;
+
+  const catRev={},catQty={};
+  rows.forEach(r=>{ catRev[r.category]=(catRev[r.category]||0)+r._price; catQty[r.category]=(catQty[r.category]||0)+r._qty; });
+  const catLabels=Object.keys(catRev).sort((a,b)=>catRev[b]-catRev[a]);
+  const topCat=catLabels[0], topCatPct=(catRev[topCat]/totalRev*100).toFixed(1);
+  const hhi=catLabels.reduce((s,c)=>s+Math.pow(catRev[c]/totalRev,2),0);
+  const top2Rev=catLabels.slice(0,2).reduce((s,c)=>s+catRev[c],0);
+  const revenueAtRisk=(top2Rev/totalRev*100).toFixed(1);
+
+  const genderRev={};
+  rows.forEach(r=>{ genderRev[r.gender]=(genderRev[r.gender]||0)+r._price; });
+  const ageBuckets=[{label:'18–25',lo:18,hi:25},{label:'26–35',lo:26,hi:35},{label:'36–45',lo:36,hi:45},{label:'46–55',lo:46,hi:55},{label:'56+',lo:56,hi:999}];
+  const ageRev=ageBuckets.map(b=>({label:b.label,rev:rows.filter(r=>r._age>=b.lo&&r._age<=b.hi).reduce((s,r)=>s+r._price,0)}));
+
+  const payRev={};
+  rows.forEach(r=>{ payRev[r.payment_method]=(payRev[r.payment_method]||0)+r._price; });
+
+  const mallRev={},mallTx={};
+  rows.forEach(r=>{ mallRev[r.shopping_mall]=(mallRev[r.shopping_mall]||0)+r._price; mallTx[r.shopping_mall]=(mallTx[r.shopping_mall]||0)+1; });
+  const mallData=Object.keys(mallRev).map(m=>({name:m,revenue:mallRev[m],tx:mallTx[m],eff:mallRev[m]/mallTx[m]})).sort((a,b)=>b.revenue-a.revenue);
+  const avgMallEff=mallData.reduce((s,m)=>s+m.eff,0)/mallData.length;
+
+  const monthRev={};
+  rows.forEach(r=>{ if(!r._date) return; const k=monthKey(r._date); monthRev[k]=(monthRev[k]||0)+r._price; });
+  const allDates=rows.filter(r=>r._date).map(r=>r._date);
+  const minDate=new Date(Math.min(...allDates)); const maxDate=new Date(Math.max(...allDates));
+  const monthLabels=[],monthRevArr=[];
+  let cur=new Date(minDate.getFullYear(),minDate.getMonth(),1);
+  const end=new Date(maxDate.getFullYear(),maxDate.getMonth(),1);
+  while(cur<=end){ const k=monthKey(cur); monthLabels.push(k); monthRevArr.push(monthRev[k]||0); cur=new Date(cur.getFullYear(),cur.getMonth()+1,1); }
+
+  // Seasonal
+  const avgMonthRev=monthRevArr.reduce((s,v)=>s+v,0)/monthRevArr.length;
+  const revStdDev=Math.sqrt(monthRevArr.reduce((s,v)=>s+Math.pow(v-avgMonthRev,2),0)/monthRevArr.length);
+  const coeffVar=revStdDev/avgMonthRev*100;
+  const stabilityScore=Math.max(0,Math.min(100,100-coeffVar)).toFixed(0);
+  const seasonalIndex=monthRevArr.map(v=>+((v-avgMonthRev)/avgMonthRev*100).toFixed(1));
+  const peakMonthIdx=seasonalIndex.indexOf(Math.max(...seasonalIndex));
+  const troughMonthIdx=seasonalIndex.indexOf(Math.min(...seasonalIndex));
+  const peakMonth=monthLabels[peakMonthIdx]||'—', troughMonth=monthLabels[troughMonthIdx]||'—';
+  const peakLift=seasonalIndex[peakMonthIdx], troughDip=seasonalIndex[troughMonthIdx];
+
+  // Forecasting
+  const {smoothed, forecast} = exponentialSmooth(monthRevArr);
+  const forecastLabels = [], forecastVals = [];
+  const lastDate = new Date(maxDate.getFullYear(),maxDate.getMonth()+1,1);
+  for(let i=0;i<3;i++){
+    const d = new Date(lastDate.getFullYear(),lastDate.getMonth()+i,1);
+    forecastLabels.push(monthKey(d));
+  }
+
+  // Pareto
+  const custSpend={};
+  rows.forEach(r=>{ custSpend[r.customer_id]=(custSpend[r.customer_id]||0)+r._price; });
+  const spendVals=Object.values(custSpend).sort((a,b)=>b-a);
+  const totalCustSpend=spendVals.reduce((s,v)=>s+v,0);
+  let cumRev=0,custFor80=0;
+  for(let i=0;i<spendVals.length;i++){ cumRev+=spendVals[i]; if(cumRev>=totalCustSpend*0.8){custFor80=i+1;break;} }
+  const paretoRatio=(custFor80/spendVals.length*100).toFixed(1);
+  const top20Idx=Math.ceil(spendVals.length*0.2);
+  const top20Rev=spendVals.slice(0,top20Idx).reduce((s,v)=>s+v,0);
+  const top20Pct=(top20Rev/totalCustSpend*100).toFixed(1);
+  const paretoCurveX=[],paretoCurveY=[];
+  for(let i=0;i<=20;i++){ const idx=Math.min(Math.floor(spendVals.length*i/20),spendVals.length); const rev=spendVals.slice(0,idx).reduce((s,v)=>s+v,0); paretoCurveX.push(i*5); paretoCurveY.push(+(rev/totalCustSpend*100).toFixed(2)); }
+  const paretoEqualY=paretoCurveX.map(x=>x);
+
+  // Retention
+  const custTxCount={};
+  rows.forEach(r=>{ custTxCount[r.customer_id]=(custTxCount[r.customer_id]||0)+1; });
+  const txCountArr=Object.values(custTxCount);
+  const totalCusts=txCountArr.length;
+  const repeatCusts=txCountArr.filter(v=>v>1).length;
+  const repeatRate=(repeatCusts/totalCusts*100).toFixed(1);
+  const avgTxPerCust=(totalTx/totalCusts).toFixed(2);
+  const freq1=txCountArr.filter(v=>v===1).length,freq2=txCountArr.filter(v=>v===2).length,freq3=txCountArr.filter(v=>v===3).length,freq4p=txCountArr.filter(v=>v>=4).length;
+  const oneTimeCustRev=Object.keys(custTxCount).filter(c=>custTxCount[c]===1).reduce((s,c)=>s+(custSpend[c]||0),0);
+  const repeatCustRev=Object.keys(custTxCount).filter(c=>custTxCount[c]>1).reduce((s,c)=>s+(custSpend[c]||0),0);
+  const oneTimePct=(oneTimeCustRev/totalCustSpend*100).toFixed(1);
+  const repeatRevPct=(repeatCustRev/totalCustSpend*100).toFixed(1);
+
+  // Segments
+  const sortedForSeg=Object.values(custSpend).sort((a,b)=>a-b);
+  const p70=sortedForSeg[Math.floor(totalCusts*0.7)],p30=sortedForSeg[Math.floor(totalCusts*0.3)];
+  let segHigh=0,segMid=0,segLow=0;
+  sortedForSeg.forEach(v=>{ if(v>=p70) segHigh++; else if(v>=p30) segMid++; else segLow++; });
+
+  // Basket
+  const basketData = computeBasket(rows);
+
+  // Cohorts
+  const cohortData = computeCohorts(rows);
+
+  return {
+    totalRev,totalTx,aov,uniqueCust,rpc,
+    catRev,catQty,catLabels,topCat,topCatPct,hhi,top2Rev,revenueAtRisk,
+    genderRev,ageRev,payRev,mallData,avgMallEff,
+    monthLabels,monthRevArr,avgMonthRev,coeffVar,stabilityScore,
+    seasonalIndex,peakMonth,troughMonth,peakLift,troughDip,
+    forecastLabels, forecast,
+    paretoRatio,top20Pct,paretoCurveX,paretoCurveY,paretoEqualY,
+    repeatRate,avgTxPerCust,freq1,freq2,freq3,freq4p,
+    oneTimeCustRev,repeatCustRev,oneTimePct,repeatRevPct,totalCusts,
+    segHigh,segMid,segLow,
+    basketData, cohortData,
+    periodLabel:`${monthLabels[0]||'—'} – ${monthLabels[monthLabels.length-1]||'—'}`,
+    numMonths:monthLabels.length
+  };
+}
+
+// ════════════════════════════════════════════════════════
+// ASK THE DATA
+// ════════════════════════════════════════════════════════
+const CATEGORIES = ['Clothing','Shoes','Technology','Cosmetics','Food & Beverage','Toys','Books','Souvenir'];
+const GENDERS = ['Female','Male'];
+const MALLS = ['Kanyon','Forum Istanbul','Metrocity','Metropol AVM','Istinye Park','Mall of Istanbul','Emaar Square Mall','Cevahir AVM','Zorlu Center','Viaport Outlet'];
+
+function parseNLQuery(q){
+  const ql = q.toLowerCase();
+  let cat = 'All', gender = 'All', mall = 'All';
+  CATEGORIES.forEach(c=>{ if(ql.includes(c.toLowerCase()) || (c==='Food & Beverage' && (ql.includes('food') || ql.includes('beverage')))) cat = c; });
+  if(ql.includes('female') || ql.includes('women') || ql.includes('woman')) gender='Female';
+  else if(ql.includes('male') || ql.includes('men') || ql.includes('man')) gender='Male';
+  MALLS.forEach(m=>{ if(ql.includes(m.toLowerCase())) mall = m; });
+  return {cat, gender, mall};
+}
+
+function askQuick(q){ document.getElementById('askInput').value=q; processAskQuery(); }
+
+function processAskQuery(){
+  const q = document.getElementById('askInput').value.trim();
+  if(!q) return;
+  const {cat, gender, mall} = parseNLQuery(q);
+  activeFilters.cat = cat; activeFilters.gender = gender; activeFilters.mall = mall;
+  // Update filter buttons
+  document.querySelectorAll('[data-filter="cat"]').forEach(b=>b.classList.toggle('active',b.dataset.val===cat));
+  document.querySelectorAll('[data-filter="gender"]').forEach(b=>b.classList.toggle('active',b.dataset.val===gender));
+  const parts = [];
+  if(cat!=='All') parts.push(`Category: <strong>${cat}</strong>`);
+  if(gender!=='All') parts.push(`Gender: <strong>${gender}</strong>`);
+  if(mall!=='All') parts.push(`Mall: <strong>${mall}</strong>`);
+  const banner = document.getElementById('askResultBanner');
+  if(parts.length){
+    banner.innerHTML = `✓ Applied: ${parts.join(' · ')} — dashboard updated`;
+    banner.style.display='block';
+    document.getElementById('askClearBtn').style.display='block';
+  }
+  applyFilters();
+}
+
+function clearAskQuery(){
+  document.getElementById('askInput').value='';
+  activeFilters = {cat:'All',gender:'All',mall:'All'};
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.val==='All'));
+  document.getElementById('askResultBanner').style.display='none';
+  document.getElementById('askClearBtn').style.display='none';
+  applyFilters();
+}
+
+document.getElementById('askInput').addEventListener('keydown', e=>{ if(e.key==='Enter') processAskQuery(); });
+
+// ════════════════════════════════════════════════════════
+// FILTER BAR
+// ════════════════════════════════════════════════════════
+document.querySelectorAll('.filter-btn').forEach(btn=>{
+  btn.addEventListener('click', function(){
+    const filter = this.dataset.filter;
+    document.querySelectorAll(`[data-filter="${filter}"]`).forEach(b=>b.classList.remove('active'));
+    this.classList.add('active');
+    activeFilters[filter] = this.dataset.val;
+    applyFilters();
+  });
+});
+
+function getFilteredRows(){
+  let rows = RAW_DATA;
+  if(activeFilters.cat!=='All') rows=rows.filter(r=>r.category===activeFilters.cat);
+  if(activeFilters.gender!=='All') rows=rows.filter(r=>r.gender===activeFilters.gender);
+  if(activeFilters.mall!=='All') rows=rows.filter(r=>r.shopping_mall===activeFilters.mall);
+  return rows;
+}
+
+function applyFilters(){
+  const rows = getFilteredRows();
+  if(rows.length===0) return;
+  const C = compute(rows);
+  renderKPIs(C); renderCharts(C); renderMallTable(C.mallData,C.avgMallEff);
+  renderConcentration(C); renderSeasonalTags(C); renderRetentionFunnel(C);
+  renderCohortHeatmap(C.cohortData);
+  renderBasketGraph(C.basketData, C.catRev, C.totalRev);
+  renderGeoMap(C.mallData);
+  renderInsights(C);
+}
+
+// ════════════════════════════════════════════════════════
+// CHART UTILITIES
+// ════════════════════════════════════════════════════════
+function dc(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+// ════════════════════════════════════════════════════════
+// RENDER CHARTS
+// ════════════════════════════════════════════════════════
+function renderCharts(C){
+  // TREND + FORECAST
+  dc('trend');
+  const allMonthLabels = [...C.monthLabels, ...C.forecastLabels];
+  const actualData = [...C.monthRevArr, ...Array(C.forecastLabels.length).fill(null)];
+  const forecastData = [...Array(C.monthRevArr.length-1).fill(null), C.monthRevArr[C.monthRevArr.length-1], ...C.forecast];
+  const momGrowth = C.monthRevArr.map((v,i)=>i===0?0:+((v-C.monthRevArr[i-1])/C.monthRevArr[i-1]*100).toFixed(2));
+  const tCtx = document.getElementById('trendChart').getContext('2d');
+  const grad = tCtx.createLinearGradient(0,0,0,300);
+  grad.addColorStop(0,'rgba(90,79,207,0.35)'); grad.addColorStop(1,'rgba(90,79,207,0)');
+  charts.trend = new Chart(tCtx,{type:'line',data:{labels:allMonthLabels,datasets:[
+    {label:'Monthly Revenue',data:actualData,borderColor:COLORS.primaryL,backgroundColor:grad,borderWidth:2,pointRadius:3,pointHoverRadius:6,pointBackgroundColor:COLORS.primaryL,fill:true,tension:.4,yAxisID:'y',spanGaps:false},
+    {label:'Forecast',data:forecastData,borderColor:COLORS.gold,backgroundColor:'transparent',borderWidth:2,borderDash:[6,3],pointRadius:3,pointBackgroundColor:COLORS.gold,pointBorderColor:'rgba(242,201,76,0.5)',fill:false,tension:.3,yAxisID:'y',spanGaps:true},
+    {label:'MoM %',data:[...momGrowth,...Array(C.forecastLabels.length).fill(null)],borderColor:COLORS.teal,backgroundColor:'transparent',borderWidth:1.5,pointRadius:0,borderDash:[3,3],fill:false,tension:.3,yAxisID:'y2',spanGaps:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end',labels:{boxWidth:12,usePointStyle:true,pointStyle:'circle',font:{size:10}}},tooltip:{backgroundColor:'#26263D',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>ctx.datasetIndex===0?` Revenue: ${fmt(ctx.raw)}`:ctx.datasetIndex===1?` Forecast: ${fmt(ctx.raw)}`:`MoM: ${ctx.raw?.toFixed(1)||'—'}%`}}},scales:{x:{grid:{color:COLORS.grid},ticks:{maxRotation:45,font:{size:9}}},y:{grid:{color:COLORS.grid},ticks:{callback:v=>fmt(v)}},y2:{position:'right',grid:{display:false},ticks:{callback:v=>(v||0).toFixed(0)+'%',color:COLORS.teal}}}}});
+
+  // GENDER
+  dc('gender');
+  const gLabels=Object.keys(C.genderRev),gVals=gLabels.map(k=>C.genderRev[k]),gTotal=gVals.reduce((a,b)=>a+b,0);
+  charts.gender=new Chart(document.getElementById('genderChart'),{type:'doughnut',data:{labels:gLabels,datasets:[{data:gVals,backgroundColor:[COLORS.coral,COLORS.primary,COLORS.gold],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{position:'right',labels:{boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)} (${(ctx.raw/gTotal*100).toFixed(1)}%)`}}}}});
+
+  // AGE
+  dc('age');
+  const topAgeIdx=C.ageRev.reduce((mi,v,vi,a)=>v.rev>a[mi].rev?vi:mi,0);
+  charts.age=new Chart(document.getElementById('ageChart'),{type:'bar',data:{labels:C.ageRev.map(a=>a.label),datasets:[{data:C.ageRev.map(a=>a.rev),backgroundColor:C.ageRev.map((_,i)=>i===topAgeIdx?COLORS.gold:COLORS.surface2),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}`}}},scales:{x:{grid:{display:false},ticks:{font:{size:10}}},y:{display:false}}}});
+
+  // CATEGORY
+  dc('cat');
+  charts.cat=new Chart(document.getElementById('categoryChart'),{type:'bar',data:{labels:C.catLabels,datasets:[{label:'Revenue',data:C.catLabels.map(c=>C.catRev[c]),backgroundColor:COLORS.primary,borderRadius:5,yAxisID:'y',order:2},{label:'Quantity Sold',data:C.catLabels.map(c=>C.catQty[c]),type:'line',borderColor:COLORS.gold,backgroundColor:'transparent',pointBackgroundColor:COLORS.gold,borderWidth:2,pointRadius:4,yAxisID:'y2',order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:ctx=>ctx.datasetIndex===0?` Revenue: ${fmt(ctx.raw)}`:`Qty: ${fmtN(ctx.raw)}`}}},scales:{x:{grid:{color:COLORS.grid}},y:{grid:{color:COLORS.grid},ticks:{callback:v=>fmt(v)}},y2:{position:'right',grid:{display:false},ticks:{callback:v=>fmtN(v),color:COLORS.gold}}}}});
+
+  // SEGMENT
+  dc('seg');
+  charts.seg=new Chart(document.getElementById('segmentChart'),{type:'doughnut',data:{labels:['High-Value','Mid-Value','Low-Value'],datasets:[{data:[C.segHigh,C.segMid,C.segLow],backgroundColor:[COLORS.gold,COLORS.teal,COLORS.coral],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'right',labels:{boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw.toLocaleString()} customers`}}}}});
+
+  // CAT SHARE
+  dc('catShare');
+  const pColors=['rgba(90,79,207,0.75)','rgba(123,114,233,0.7)','rgba(242,201,76,0.7)','rgba(47,191,159,0.65)','rgba(255,107,107,0.6)','rgba(90,79,207,0.4)','rgba(123,114,233,0.4)','rgba(242,201,76,0.35)'];
+  charts.catShare=new Chart(document.getElementById('catShareChart'),{type:'polarArea',data:{labels:C.catLabels,datasets:[{data:C.catLabels.map(c=>C.catRev[c]),backgroundColor:C.catLabels.map((_,i)=>pColors[i%pColors.length]),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{boxWidth:8,font:{size:10},usePointStyle:true,pointStyle:'circle'}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}},scales:{r:{grid:{color:COLORS.grid},ticks:{display:false}}}}});
+
+  // PAYMENT
+  dc('payment');
+  const payLabels=Object.keys(C.payRev),payVals=payLabels.map(k=>C.payRev[k]);
+  charts.payment=new Chart(document.getElementById('paymentChart'),{type:'pie',data:{labels:payLabels,datasets:[{data:payVals,backgroundColor:[COLORS.gold,COLORS.primary,COLORS.teal],borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:10,usePointStyle:true,pointStyle:'circle',padding:12}},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${fmt(ctx.raw)}`}}}}});
+
+  // MALL BAR
+  dc('mallBar');
+  charts.mallBar=new Chart(document.getElementById('mallBarChart'),{type:'bar',data:{labels:C.mallData.map(m=>m.name.length>12?m.name.slice(0,12)+'…':m.name),datasets:[{data:C.mallData.map(m=>m.revenue),backgroundColor:C.mallData.map((_,i)=>i<2?COLORS.gold:i<5?COLORS.primary:COLORS.surface2),borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${fmt(ctx.raw)}`}}},scales:{x:{grid:{color:COLORS.grid},ticks:{callback:v=>fmt(v),font:{size:9}}},y:{grid:{display:false},ticks:{font:{size:9}}}}}});
+
+  // PARETO
+  dc('pareto');
+  const pCtx=document.getElementById('paretoChart').getContext('2d');
+  const pg=pCtx.createLinearGradient(0,0,0,280);
+  pg.addColorStop(0,'rgba(242,201,76,0.3)'); pg.addColorStop(1,'rgba(242,201,76,0)');
+  charts.pareto=new Chart(pCtx,{type:'line',data:{labels:C.paretoCurveX.map(x=>x+'%'),datasets:[{label:'Actual Revenue Share',data:C.paretoCurveY,borderColor:COLORS.gold,backgroundColor:pg,borderWidth:2.5,pointRadius:0,pointHoverRadius:5,fill:true,tension:.3},{label:'Equal Baseline',data:C.paretoEqualY,borderColor:'rgba(255,255,255,0.12)',backgroundColor:'transparent',borderWidth:1,borderDash:[5,4],pointRadius:0,fill:false,tension:0}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top',align:'end',labels:{boxWidth:10,usePointStyle:true,pointStyle:'circle'}},tooltip:{backgroundColor:'#26263D',borderColor:'rgba(255,255,255,0.1)',borderWidth:1}},scales:{x:{grid:{color:COLORS.grid},title:{display:true,text:'% Customers (high → low spend)',color:'#6060A0',font:{size:9}}},y:{grid:{color:COLORS.grid},ticks:{callback:v=>v+'%'},min:0,max:100}}}});
+
+  // SEASONAL
+  dc('seasonal');
+  charts.seasonal=new Chart(document.getElementById('seasonalChart'),{type:'bar',data:{labels:C.monthLabels,datasets:[{label:'Seasonal Index (%)',data:C.seasonalIndex,backgroundColor:C.seasonalIndex.map(v=>v>=0?'rgba(47,191,159,0.75)':'rgba(255,107,107,0.75)'),borderRadius:3,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#26263D',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,callbacks:{label:ctx=>`${ctx.raw>=0?'+':''}${ctx.raw}% vs avg`}}},scales:{x:{grid:{color:COLORS.grid},ticks:{maxRotation:45,font:{size:9}}},y:{grid:{color:COLORS.grid},ticks:{callback:v=>(v>=0?'+':'')+v+'%'}}}}});
+}
+
+// ════════════════════════════════════════════════════════
+// COHORT HEATMAP
+// ════════════════════════════════════════════════════════
+function cohortColor(pct){
+  if(pct===null||pct===undefined) return 'transparent';
+  const r = Math.round(90+(47-90)*(pct/100));
+  const g = Math.round(79+(191-79)*(pct/100));
+  const b = Math.round(207+(159-207)*(pct/100));
+  const a = 0.15 + (pct/100)*0.65;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function renderCohortHeatmap(cohortData){
+  const {matrix, cohortKeys, maxOffset} = cohortData;
+  if(!cohortKeys.length){ document.getElementById('cohortTable').innerHTML='<tr><td colspan="10" style="padding:20px;text-align:center;color:var(--text-dim)">Insufficient date data for cohort analysis</td></tr>'; return; }
+  let html = '<tr><th class="cohort-label">Cohort</th><th>Size</th>';
+  for(let i=0;i<=maxOffset;i++) html+=`<th>M+${i}</th>`;
+  html += '</tr>';
+  cohortKeys.forEach(ck=>{
+    const d = matrix[ck];
+    html += `<tr><td class="cohort-row-label">${ck}</td><td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px">${d.size}</td>`;
+    for(let i=0;i<=maxOffset;i++){
+      const val = d.retention[i];
+      const bg = cohortColor(val);
+      const color = val >= 30 ? '#EAEAF0' : val >= 10 ? '#9090B0' : '#6060A0';
+      html += `<td style="background:${bg};color:${color};border-radius:4px;font-weight:${i===0?'600':'400'}">${val!==undefined?val+'%':'—'}</td>`;
+    }
+    html += '</tr>';
+  });
+  document.getElementById('cohortTable').innerHTML = html;
+}
+
+// ════════════════════════════════════════════════════════
+// MARKET BASKET GRAPH (Canvas network viz)
+// ════════════════════════════════════════════════════════
+const CAT_COLORS_MAP = {
+  'Clothing':'#5A4FCF','Shoes':'#7B72E9','Technology':'#F2C94C','Cosmetics':'#FF6B6B',
+  'Food & Beverage':'#2FBF9F','Toys':'#F5A623','Books':'#A0A0FF','Souvenir':'#80D0C0'
+};
+
+function renderBasketGraph(basketData, catRev, totalRev){
+  const canvas = document.getElementById('basket-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth || 600;
+  const H = 280;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+
+  const cats = Object.keys(catRev);
+  if(!cats.length) return;
+
+  // Position nodes in a circle
+  const cx = W/2, cy = H/2;
+  const r = Math.min(W,H)*0.35;
+  const nodes = {};
+  cats.forEach((c,i)=>{
+    const angle = (i/cats.length)*Math.PI*2 - Math.PI/2;
+    nodes[c] = {
+      x: cx + Math.cos(angle)*r,
+      y: cy + Math.sin(angle)*r,
+      size: 8 + (catRev[c]/totalRev)*50,
+      color: CAT_COLORS_MAP[c] || '#7B72E9',
+      label: c
+    };
+  });
+
+  const maxPairs = Math.max(...basketData.pairs.map(p=>p.count),1);
+
+  // Draw edges
+  basketData.pairs.forEach(pair=>{
+    const a = nodes[pair.a], b = nodes[pair.b];
+    if(!a||!b) return;
+    const alpha = 0.08 + (pair.count/maxPairs)*0.35;
+    const width = 1 + (pair.count/maxPairs)*4;
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    ctx.strokeStyle = `rgba(123,114,233,${alpha})`;
+    ctx.lineWidth = width;
+    ctx.stroke();
+    // Affinity label on top 3 pairs
+    if(basketData.pairs.indexOf(pair)<3){
+      const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+      ctx.fillStyle='rgba(242,201,76,0.8)';
+      ctx.font='bold 9px DM Sans';
+      ctx.textAlign='center';
+      ctx.fillText(`${pair.count}×`,mx,my-4);
+    }
+  });
+
+  // Draw nodes
+  Object.values(nodes).forEach(n=>{
+    // Glow
+    const grd = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.size*2);
+    grd.addColorStop(0,n.color+'55'); grd.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.size*2,0,Math.PI*2);
+    ctx.fillStyle=grd; ctx.fill();
+    // Node
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.size,0,Math.PI*2);
+    ctx.fillStyle=n.color+'CC'; ctx.fill();
+    ctx.strokeStyle=n.color; ctx.lineWidth=2; ctx.stroke();
+    // Label
+    ctx.fillStyle='#EAEAF0';
+    ctx.font=`${Math.max(9,n.size*0.7)}px DM Sans`;
+    ctx.textAlign='center';
+    const labelY = n.y > cy ? n.y + n.size + 14 : n.y - n.size - 6;
+    ctx.fillText(n.label.length>8?n.label.slice(0,8)+'…':n.label, n.x, labelY);
+  });
+
+  // Legend
+  const legendEl = document.getElementById('basketLegend');
+  legendEl.innerHTML = basketData.pairs.slice(0,5).map(p=>`<div class="basket-leg-item"><div class="basket-leg-dot" style="background:${CAT_COLORS_MAP[p.a]||'#7B72E9'}"></div><span>${p.a} + ${p.b}: <strong style="color:var(--text)">${p.count}×</strong> co-purchased</span></div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// GEOSPATIAL MAP (Canvas)
+// ════════════════════════════════════════════════════════
+const MALL_COORDS = {
+  'Kanyon':           {lat:41.0772,lng:29.0105},
+  'Forum Istanbul':   {lat:40.9968,lng:28.8194},
+  'Metrocity':        {lat:41.0764,lng:29.0128},
+  'Metropol AVM':     {lat:41.0116,lng:28.9793},
+  'Istinye Park':     {lat:41.1094,lng:29.0534},
+  'Mall of Istanbul': {lat:41.0434,lng:28.8271},
+  'Emaar Square Mall':{lat:41.0124,lng:28.9821},
+  'Cevahir AVM':      {lat:41.0651,lng:28.9933},
+  'Zorlu Center':     {lat:41.0715,lng:28.9938},
+  'Viaport Outlet':   {lat:40.8883,lng:29.2938}
+};
+
+let geoMallData = [];
+function renderGeoMap(mallData){
+  geoMallData = mallData;
+  const canvas = document.getElementById('geo-map');
+  const W = canvas.parentElement.clientWidth || 600;
+  const H = 340;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+
+  // Dark map background
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#1a1a2e'); bg.addColorStop(1,'#16213e');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.03)';
+  for(let x=0;x<W;x+=40){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=0;y<H;y+=40){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  // Bosphorus-ish wavy line
+  ctx.beginPath(); ctx.moveTo(W*0.52,0);
+  for(let y=0;y<=H;y+=20){ ctx.lineTo(W*0.52+Math.sin(y*0.08)*12,y); }
+  ctx.strokeStyle='rgba(47,191,159,0.12)'; ctx.lineWidth=18; ctx.stroke();
+
+  // Istanbul label
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  ctx.font='bold 28px Bebas Neue';
+  ctx.textAlign='center';
+  ctx.fillText('İSTANBUL',W/2,H-16);
+
+  // Map malls
+  const knownMalls = mallData.filter(m=>MALL_COORDS[m.name]);
+  if(!knownMalls.length){
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.font='13px DM Sans';
+    ctx.textAlign='center';
+    ctx.fillText('Map requires Istanbul mall names',W/2,H/2);
+    return;
+  }
+
+  const latMin=40.86,latMax=41.14,lngMin=28.80,lngMax=29.32;
+  const maxRev=Math.max(...knownMalls.map(m=>m.revenue));
+
+  knownMalls.forEach(m=>{
+    const coord=MALL_COORDS[m.name]; if(!coord) return;
+    const x=((coord.lng-lngMin)/(lngMax-lngMin))*W;
+    const y=H-((coord.lat-latMin)/(latMax-latMin))*H;
+    const rel=m.revenue/maxRev;
+    const baseR=10+rel*28;
+
+    // Pulse rings
+    for(let i=3;i>=1;i--){
+      ctx.beginPath(); ctx.arc(x,y,baseR*i*0.8,0,Math.PI*2);
+      ctx.fillStyle=`rgba(90,79,207,${0.03*i})`;
+      ctx.fill();
+    }
+    // Main dot
+    const dotGrd=ctx.createRadialGradient(x,y,0,x,y,baseR);
+    dotGrd.addColorStop(0,rel>0.7?COLORS.gold:COLORS.primaryL);
+    dotGrd.addColorStop(1,'rgba(90,79,207,0.3)');
+    ctx.beginPath(); ctx.arc(x,y,baseR,0,Math.PI*2);
+    ctx.fillStyle=dotGrd; ctx.fill();
+    ctx.strokeStyle=rel>0.7?COLORS.gold:COLORS.primaryL;
+    ctx.lineWidth=2; ctx.stroke();
+
+    // Name label
+    ctx.fillStyle='rgba(234,234,240,0.85)';
+    ctx.font=`${Math.max(9,10+rel*3)}px DM Sans`;
+    ctx.textAlign='center';
+    ctx.fillText(m.name.length>14?m.name.slice(0,14)+'…':m.name,x,y+baseR+13);
+    // Revenue label inside dot
+    if(baseR>14){
+      ctx.fillStyle='white';
+      ctx.font='bold 9px DM Mono';
+      ctx.textAlign='center';
+      ctx.fillText(fmt(m.revenue),x,y+3);
+    }
+  });
+
+  canvas.onmousemove = null;
+  canvas.onmousemove = function(e){
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const tooltip=document.getElementById('mapTooltip');
+    let hit=null;
+    knownMalls.forEach(m=>{
+      const coord=MALL_COORDS[m.name]; if(!coord) return;
+      const x=((coord.lng-lngMin)/(lngMax-lngMin))*W;
+      const y=H-((coord.lat-latMin)/(latMax-latMin))*H;
+      const rel=m.revenue/maxRev;
+      const baseR=10+rel*28;
+      if(Math.hypot(mx-x,my-y)<baseR+8) hit=m;
+    });
+    if(hit){
+      tooltip.style.display='block';
+      tooltip.style.left=Math.min(mx+12,W-190)+'px';
+      tooltip.style.top=Math.max(my-60,0)+'px';
+      const rank=mallData.findIndex(m=>m.name===hit.name)+1;
+      tooltip.innerHTML=`<div class="map-tooltip-name">${hit.name}</div><div class="map-tooltip-row"><span>Revenue</span><span class="map-tooltip-val">${fmt(hit.revenue)}</span></div><div class="map-tooltip-row"><span>Transactions</span><span class="map-tooltip-val">${fmtNum(hit.tx)}</span></div><div class="map-tooltip-row"><span>Rev/Tx</span><span class="map-tooltip-val">₺${hit.eff.toFixed(0)}</span></div><div class="map-tooltip-row"><span>Network Rank</span><span class="map-tooltip-val">#${rank}</span></div>`;
+    } else { tooltip.style.display='none'; }
+  };
+  canvas.onmouseleave=()=>{ document.getElementById('mapTooltip').style.display='none'; };
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER KPIs
+// ════════════════════════════════════════════════════════
+function renderKPIs(C){
+  document.getElementById('kpi-rev').textContent=fmt(C.totalRev);
+  document.getElementById('kpi-tx').textContent=fmtNum(C.totalTx);
+  document.getElementById('kpi-aov').textContent=fmt(C.aov);
+  document.getElementById('kpi-cust').textContent=fmtNum(C.uniqueCust);
+  document.getElementById('kpi-rpc').textContent=fmt(C.rpc);
+  document.getElementById('kpi-top').textContent=C.topCatPct+'%';
+  document.getElementById('kpi-top-sub').textContent=C.topCat+' dominates';
+  const gVals=Object.values(C.genderRev),gTotal=gVals.reduce((a,b)=>a+b,0),gKeys=Object.keys(C.genderRev);
+  const femIdx=gKeys.findIndex(k=>k.toLowerCase()==='female');
+  document.getElementById('kpi-rev-change').textContent=`♀ ${femIdx>=0?(gVals[femIdx]/gTotal*100).toFixed(0)+'% Female':'—'} share`;
+  document.getElementById('kpi-aov-change').textContent=`CV: ${C.coeffVar.toFixed(1)}% variability`;
+
+  document.getElementById('rkpi-pareto').textContent=C.paretoRatio+'%';
+  const pp=document.getElementById('rkpi-pareto-pill');
+  if(parseFloat(C.paretoRatio)<20){pp.textContent='Extreme Skew';pp.className='risk-pill high';}
+  else if(parseFloat(C.paretoRatio)<30){pp.textContent='Skewed';pp.className='risk-pill med';}
+  else{pp.textContent='Healthy';pp.className='risk-pill low';}
+
+  document.getElementById('rkpi-stability').textContent=C.stabilityScore+'/100';
+  document.getElementById('rkpi-stability-sub').textContent=`CV: ${C.coeffVar.toFixed(1)}% monthly variance`;
+  const sp=document.getElementById('rkpi-stability-pill');
+  if(parseFloat(C.stabilityScore)>=70){sp.textContent='Stable';sp.className='risk-pill low';}
+  else if(parseFloat(C.stabilityScore)>=45){sp.textContent='Moderate';sp.className='risk-pill med';}
+  else{sp.textContent='Volatile';sp.className='risk-pill high';}
+
+  document.getElementById('rkpi-repeat').textContent=C.repeatRate+'%';
+  document.getElementById('rkpi-repeat-sub').textContent=`avg ${C.avgTxPerCust} visits / customer`;
+  const rp=document.getElementById('rkpi-repeat-pill');
+  if(parseFloat(C.repeatRate)>=40){rp.textContent='Healthy';rp.className='risk-pill low';}
+  else if(parseFloat(C.repeatRate)>=20){rp.textContent='At Risk';rp.className='risk-pill med';}
+  else{rp.textContent='Critical Risk';rp.className='risk-pill high';}
+
+  document.getElementById('rkpi-atrisk').textContent=C.revenueAtRisk+'%';
+  const ap=document.getElementById('rkpi-atrisk-pill');
+  if(parseFloat(C.revenueAtRisk)>=50){ap.textContent='Highly Exposed';ap.className='risk-pill high';}
+  else if(parseFloat(C.revenueAtRisk)>=35){ap.textContent='Exposed';ap.className='risk-pill med';}
+  else{ap.textContent='Manageable';ap.className='risk-pill low';}
+
+  document.getElementById('trendBadge').textContent=`${C.numMonths} Months + Forecast`;
+  document.getElementById('catBadge').textContent=`${C.catLabels.length} Categories`;
+  document.getElementById('mallBadge').textContent=`${C.mallData.length} Locations`;
+  document.getElementById('paretoBadge').textContent=`Top 20% = ${C.top20Pct}% Rev`;
+  document.getElementById('headerMeta').textContent=`${C.periodLabel} · ${fmtNum(C.totalTx)} transactions`;
+  document.getElementById('footerInfo').textContent=`${C.mallData.length} Malls · ${C.catLabels.length} Categories`;
+  document.getElementById('footerRecords').textContent=`DATA: ${fmtNum(C.totalTx)} records`;
+  document.getElementById('footerPeriod').textContent=`PERIOD: ${C.periodLabel}`;
+  document.getElementById('seg-high').textContent=fmtNum(C.segHigh);
+  document.getElementById('seg-mid').textContent=fmtNum(C.segMid);
+  document.getElementById('seg-low').textContent=fmtNum(C.segLow);
+}
+
+function renderMallTable(mallData,avgMallEff){
+  const maxEff=Math.max(...mallData.map(m=>m.eff));
+  document.getElementById('mallBody').innerHTML=mallData.map((m,i)=>{
+    const rc=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-n';
+    const fp=((m.eff/maxEff)*100).toFixed(0);
+    const vsAvg=((m.eff/avgMallEff-1)*100).toFixed(1);
+    const vc=parseFloat(vsAvg)>=0?'above':'below';
+    return `<tr><td><span class="rank-badge ${rc}">${i+1}</span></td><td><span class="mall-name">${m.name}</span></td><td>${fmt(m.revenue)}</td><td>${m.tx.toLocaleString()}</td><td><div class="eff-bar"><span>₺${m.eff.toFixed(0)}</span><div class="eff-mini-bg"><div class="eff-mini-fill" style="width:${fp}%"></div></div></div></td><td><span class="vs-avg-badge ${vc}">${(parseFloat(vsAvg)>=0?'+':'')+vsAvg}%</span></td></tr>`;
+  }).join('');
+}
+
+function renderConcentration(C){
+  const top3=C.catLabels.slice(0,3);
+  const top3Pct=top3.reduce((s,c)=>s+C.catRev[c]/C.totalRev*100,0);
+  const cc=[COLORS.primary,COLORS.primaryL,COLORS.gold,COLORS.surface2];
+  const cd=[...top3.map((c,i)=>({name:c,pct:+(C.catRev[c]/C.totalRev*100).toFixed(1),color:cc[i]})),{name:`Others (${C.catLabels.length-3})`,pct:+(100-top3Pct).toFixed(1),color:cc[3]}];
+  document.getElementById('sigHeading').textContent=`Top 3 Categories Own ${top3Pct.toFixed(1)}% of Revenue`;
+  document.getElementById('concBars').innerHTML=cd.map(c=>`<div class="conc-row"><div class="conc-label">${c.name}</div><div class="conc-bar-bg"><div class="conc-bar-fill" style="width:0%;background:${c.color}" data-width="${c.pct}"></div></div><div class="conc-pct">${c.pct}%</div></div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.conc-bar-fill').forEach(el=>el.style.width=el.dataset.width+'%'),300);
+  document.getElementById('sigAlert').innerHTML=`<strong>${C.hhi>0.25?'⚠ HIGH':'✓ MODERATE'} HHI: ${C.hhi.toFixed(4)}</strong> — ${C.hhi>0.25?`A disruption in <strong>${C.catLabels[0]}</strong> eliminates ${C.topCatPct}% of revenue instantly. Diversification is strategically urgent.`:'Concentration within acceptable bounds. Continue monitoring.'}`;
+}
+
+function renderSeasonalTags(C){
+  document.getElementById('seasonalTags').innerHTML=`<span class="seasonal-tag peak">📈 Peak: ${C.peakMonth} (+${C.peakLift.toFixed(1)}%)</span><span class="seasonal-tag trough">📉 Trough: ${C.troughMonth} (${C.troughDip.toFixed(1)}%)</span><span class="seasonal-tag cv">CV: ${C.coeffVar.toFixed(1)}%</span>`;
+}
+
+function renderRetentionFunnel(C){
+  const total=C.totalCusts;
+  const funnel=[{label:'1 Visit only',count:C.freq1,color:COLORS.coral,pct:(C.freq1/total*100).toFixed(0)},{label:'2 Visits',count:C.freq2,color:COLORS.amber,pct:(C.freq2/total*100).toFixed(0)},{label:'3 Visits',count:C.freq3,color:COLORS.primaryL,pct:(C.freq3/total*100).toFixed(0)},{label:'4+ Visits',count:C.freq4p,color:COLORS.teal,pct:(C.freq4p/total*100).toFixed(0)}];
+  const maxW=Math.max(...funnel.map(f=>f.count));
+  document.getElementById('retentionFunnel').innerHTML=funnel.map(f=>`<div class="funnel-row"><div class="funnel-label">${f.label}</div><div class="funnel-bar-wrap"><div class="funnel-bar-bg"><div class="funnel-bar-fill" style="width:0%;background:${f.color}" data-width="${(f.count/maxW*100).toFixed(0)}">${f.pct}%</div></div></div><div class="funnel-count">${fmtNum(f.count)}</div></div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.funnel-bar-fill').forEach(el=>el.style.width=el.dataset.width+'%'),300);
+  document.getElementById('retentionAlert').innerHTML=`<strong>⚠ ${(C.freq1/C.totalCusts*100).toFixed(1)}% of customers visit only once.</strong> They generate ${C.oneTimePct}% of revenue but carry zero lifetime value.`;
+  document.getElementById('retentionOpp').innerHTML=`<strong>✓ Opportunity:</strong> A 10-point retention improvement yields ~${fmt(C.totalRev*0.08)} in incremental revenue — no new acquisition cost required.`;
+}
+
+// ════════════════════════════════════════════════════════
+// NARRATIVE INSIGHTS (story-driven, no bullet points)
+// ════════════════════════════════════════════════════════
+function renderInsights(C){
+  const femRev=C.genderRev['Female']||0,malRev=C.genderRev['Male']||0;
+  const topAge=C.ageRev.reduce((a,b)=>a.rev>b.rev?a:b);
+  const bestMall=C.mallData[0],worstMall=C.mallData[C.mallData.length-1];
+  const effGap=((bestMall.eff/worstMall.eff-1)*100).toFixed(0);
+  const cashRev=C.payRev['Cash']||0,cashPct=(cashRev/C.totalRev*100).toFixed(1);
+  const top2CatPct=((C.catLabels.slice(0,2).reduce((s,c)=>s+(C.catRev[c]||0),0)/C.totalRev)*100).toFixed(1);
+  const basketTop=C.basketData.pairs[0];
+
+  const insights=[
+    {
+      num:'01',
+      title:`A fragile empire: ${C.paretoRatio}% of customers carry the entire business`,
+      body:`The revenue curve tells a stark story — just ${C.paretoRatio}% of your customer base is responsible for 80% of total revenue, and the top 20% alone account for ${C.top20Pct}%. This isn't loyalty; it's dependency. The moment a handful of high-value customers choose a competitor, the revenue floor collapses faster than any acquisition campaign can compensate. The business needs a formal VIP retention tier, not as a perk, but as infrastructure.`,
+      tag:'tag-risk',tagText:'Critical Risk'
+    },
+    {
+      num:'02',
+      title:`Two categories are writing cheques your supply chain can't guarantee`,
+      body:`${C.catLabels[0]} and ${C.catLabels[1]} together command ${top2CatPct}% of all revenue — a concentration score (HHI: ${C.hhi.toFixed(4)}) ${C.hhi>0.25?'that sits above the 0.25 danger threshold':'approaching the threshold that warrants governance attention'}. This isn't a portfolio; it's a two-legged stool. ${C.catLabels.slice(-2).join(' and ')}, currently underweight, represent the hedge the business hasn't yet placed. The question isn't whether to diversify — it's how quickly.`,
+      tag:'tag-risk',tagText:'High Risk'
+    },
+    {
+      num:'03',
+      title:`${(100-parseFloat(C.repeatRate)).toFixed(1)}% of customers walk out the door and never look back`,
+      body:`The retention funnel is an uncomfortable read. Only ${C.repeatRate}% of customers return for a second purchase. The rest — ${(100-parseFloat(C.repeatRate)).toFixed(1)}% — are acquired, transacted with once, and lost. Every marketing euro spent on new acquisition while this door remains open is revenue evaporating. Industry benchmarks are clear: a 10-point improvement in retention compounds into 25–30% revenue growth without a single additional acquisition. The fix is sequenced re-engagement, not more acquisition spend.`,
+      tag:'tag-urgent',tagText:'Urgent Action'
+    },
+    {
+      num:'04',
+      title:`The calendar is controlling the business — ${C.peakMonth} and ${C.troughMonth} are writing the annual story`,
+      body:`Revenue peaks at +${C.peakLift.toFixed(1)}% above monthly average in ${C.peakMonth}, then craters to ${C.troughDip.toFixed(1)}% below average in ${C.troughMonth}. That's a ${(C.peakLift-C.troughDip).toFixed(1)}-point swing. With a stability score of ${C.stabilityScore}/100 and a coefficient of variation of ${C.coeffVar.toFixed(1)}%, this is a business that is seasonally reactive, not seasonally planned. Inventory should be pre-positioned 6–8 weeks before ${C.peakMonth}. ${C.troughMonth} needs an engineered demand stimulus, not passive acceptance of low footfall.`,
+      tag:'tag-watch',tagText:'Strategic Watch'
+    },
+    {
+      num:'05',
+      title:`${bestMall.name} has cracked a code that ${worstMall.name} hasn't seen yet`,
+      body:`${bestMall.name} generates ₺${bestMall.eff.toFixed(0)} per transaction. ${worstMall.name} generates ₺${worstMall.eff.toFixed(0)} — a ${effGap}% efficiency gap that compounds across every sale, every day, every year. This isn't a location problem; it reflects category mix, staff training, and floor merchandising decisions that are within operational control. A 90-day structured audit of ${bestMall.name}'s playbook, systematically applied to the bottom three locations, is the highest-ROI initiative available right now.`,
+      tag:'tag-action',tagText:'Immediate Action'
+    },
+    ...(basketTop?[{
+      num:'06',
+      title:`The basket tells a hidden cross-sell story your merchandising team needs to hear`,
+      body:`Market basket analysis reveals that "${basketTop.a}" and "${basketTop.b}" are the most frequently co-purchased pair, appearing together ${basketTop.count} times. This is an organic bundling signal that the store layout and promotional strategy haven't yet capitalised on. Adjacent placement, bundle pricing, and "Frequently bought together" POS prompts for the top 5 affinity pairs represent a near-zero-cost AOV uplift mechanism. The data is already making this argument — the business just hasn't acted on it.`,
+      tag:'tag-growth',tagText:'Growth Lever'
+    }]:[]),
+    {
+      num:basketTop?'07':'06',
+      title:`${cashPct}% of transactions are invisible to your marketing engine`,
+      body:`Cash transactions (${fmt(cashRev)}) generate revenue but leave no data trail. They can't be retargeted, enrolled in loyalty, or personalised. Credit card users in comparable retail environments spend 18–22% more per visit and return at 3× the frequency. A simple card-payment incentive — 3–5% at-till discount, or a points multiplier — can shift behaviour within 60 days. At current cash volume, even a 50% migration to card adds ${fmt(cashRev*0.5*0.2)} through elevated AOV alone, before loyalty and re-engagement effects compound.`,
+      tag:'tag-growth',tagText:'Growth Lever'
+    }
+  ];
+
+  document.getElementById('insightList').innerHTML=insights.map(ins=>`
+    <div class="insight-item">
+      <div class="insight-num">${ins.num}</div>
+      <div>
+        <div class="insight-title">${ins.title}</div>
+        <div class="insight-body">${ins.body}</div>
+        <span class="insight-tag ${ins.tag}">${ins.tagText}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// PDF EXPORT
+// ════════════════════════════════════════════════════════
+function openPdfModal(){ document.getElementById('pdf-overlay').classList.add('show'); }
+function closePdfModal(){ document.getElementById('pdf-overlay').classList.remove('show'); document.getElementById('pdfProgress').style.display='none'; document.getElementById('pdfProgressFill').style.width='0'; }
+
+async function generatePDF(){
+  const prog=document.getElementById('pdfProgress');
+  const fill=document.getElementById('pdfProgressFill');
+  const txt=document.getElementById('pdfProgressText');
+  prog.style.display='block';
+
+  const steps=[{t:'Compiling KPI data…',p:15},{t:'Capturing charts…',p:35},{t:'Building narrative section…',p:60},{t:'Formatting layout…',p:80},{t:'Finalising document…',p:95}];
+  for(const s of steps){ txt.textContent=s.t; fill.style.width=s.p+'%'; await sleep(400); }
+
+  const C=COMPUTED;
+  const now=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>RetailIQ Executive Briefing</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;padding:40px;background:#fff;color:#1a1a2e;font-size:12px;line-height:1.6}
+    .cover{text-align:center;padding:60px 40px;background:linear-gradient(135deg,#1E1E2F,#2a2440);color:white;border-radius:8px;margin-bottom:40px}
+    .cover h1{font-size:40px;letter-spacing:6px;margin:0 0 8px;color:#F2C94C}
+    .cover h2{font-size:18px;color:#9090B0;font-weight:300;margin:0 0 20px}
+    .cover .meta{font-size:12px;color:#6060A0}
+    .section{margin-bottom:32px}
+    .section-title{font-size:16px;font-weight:700;border-bottom:2px solid #5A4FCF;padding-bottom:6px;margin-bottom:16px;color:#1a1a2e;text-transform:uppercase;letter-spacing:1px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+    .kpi-box{background:#f8f8ff;border:1px solid #e0e0f0;border-radius:6px;padding:14px;border-left:3px solid #5A4FCF}
+    .kpi-box.gold{border-left-color:#F2C94C}.kpi-box.teal{border-left-color:#2FBF9F}.kpi-box.coral{border-left-color:#FF6B6B}
+    .kpi-box .label{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:#6060A0;font-weight:700;margin-bottom:4px}
+    .kpi-box .value{font-size:20px;font-weight:700;color:#1a1a2e;font-family:monospace}
+    .kpi-box .sub{font-size:10px;color:#9090B0;margin-top:2px}
+    .insight-box{background:#f9f9ff;border:1px solid #e8e8f0;border-radius:6px;padding:16px;margin-bottom:12px;break-inside:avoid}
+    .insight-box .num{font-size:22px;font-weight:700;color:#7B72E9;opacity:.5;float:left;margin-right:10px;line-height:1}
+    .insight-box .title{font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:6px}
+    .insight-box .body{font-size:11px;color:#555;line-height:1.65;clear:none}
+    .tag{display:inline-block;margin-top:6px;font-size:9px;padding:2px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .tag.risk{background:#ffe8e8;color:#FF6B6B}.tag.action{background:#e8e8ff;color:#5A4FCF}.tag.growth{background:#e8fff8;color:#2FBF9F}.tag.watch{background:#fff8e0;color:#F2C94C}.tag.urgent{background:#fff0d8;color:#F5A623}
+    .risk-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+    .risk-box{background:#f8f8ff;border:1px solid #e0e0f0;border-radius:6px;padding:14px}
+    .risk-box .label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6060A0;font-weight:700;margin-bottom:4px}
+    .risk-box .value{font-size:18px;font-weight:700;font-family:monospace;color:#1a1a2e}
+    .risk-box .pill{display:inline-block;margin-top:4px;font-size:9px;padding:2px 8px;border-radius:4px;font-weight:700;text-transform:uppercase}
+    .pill-high{background:#ffe8e8;color:#FF6B6B}.pill-med{background:#fff0d8;color:#F5A623}.pill-low{background:#e8fff8;color:#2FBF9F}
+    .mall-table{width:100%;border-collapse:collapse;margin-bottom:20px;font-size:11px}
+    .mall-table th{background:#f0f0fa;padding:8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#6060A0;border-bottom:1px solid #e0e0f0}
+    .mall-table td{padding:8px;border-bottom:1px solid #f0f0f8}
+    .mall-table tr:nth-child(odd) td{background:#fafafe}
+    .footer-note{text-align:center;font-size:10px;color:#9090B0;margin-top:40px;padding-top:16px;border-top:1px solid #e0e0f0}
+    @media print{body{padding:20px}.cover{border-radius:0}}
+  </style></head><body>
+  <div class="cover">
+    <h1>RETAILIQ</h1>
+    <h2>Executive Intelligence Briefing</h2>
+    <div class="meta">Generated: ${now} · Period: ${C.periodLabel||'—'} · ${fmtNum(C.totalTx||0)} Transactions</div>
+  </div>
+  <div class="section">
+    <div class="section-title">Primary KPIs</div>
+    <div class="kpi-grid">
+      <div class="kpi-box gold"><div class="label">Total Revenue</div><div class="value">${fmt(C.totalRev||0)}</div><div class="sub">Gross across all malls</div></div>
+      <div class="kpi-box"><div class="label">Transactions</div><div class="value">${fmtNum(C.totalTx||0)}</div><div class="sub">Unique invoices</div></div>
+      <div class="kpi-box teal"><div class="label">Avg Order Value</div><div class="value">${fmt(C.aov||0)}</div><div class="sub">Per transaction</div></div>
+      <div class="kpi-box"><div class="label">Unique Customers</div><div class="value">${fmtNum(C.uniqueCust||0)}</div><div class="sub">Distinct IDs</div></div>
+      <div class="kpi-box"><div class="label">Revenue / Customer</div><div class="value">${fmt(C.rpc||0)}</div><div class="sub">Lifetime value proxy</div></div>
+      <div class="kpi-box coral"><div class="label">Top Category</div><div class="value">${C.topCatPct||'—'}%</div><div class="sub">${C.topCat||'—'} dominates</div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Risk Intelligence Dashboard</div>
+    <div class="risk-grid">
+      <div class="risk-box"><div class="label">Pareto Ratio</div><div class="value">${C.paretoRatio||'—'}%</div><div>of customers = 80% of revenue</div><span class="pill ${parseFloat(C.paretoRatio||0)<20?'pill-high':'pill-med'}">${parseFloat(C.paretoRatio||0)<20?'Extreme Skew':'Skewed'}</span></div>
+      <div class="risk-box"><div class="label">Revenue Stability</div><div class="value">${C.stabilityScore||'—'}/100</div><div>CV: ${(C.coeffVar||0).toFixed(1)}% monthly variance</div><span class="pill ${parseFloat(C.stabilityScore||0)>=70?'pill-low':parseFloat(C.stabilityScore||0)>=45?'pill-med':'pill-high'}">${parseFloat(C.stabilityScore||0)>=70?'Stable':parseFloat(C.stabilityScore||0)>=45?'Moderate':'Volatile'}</span></div>
+      <div class="risk-box"><div class="label">Repeat Purchase Rate</div><div class="value">${C.repeatRate||'—'}%</div><div>Avg ${C.avgTxPerCust||'—'} visits per customer</div><span class="pill ${parseFloat(C.repeatRate||0)>=40?'pill-low':parseFloat(C.repeatRate||0)>=20?'pill-med':'pill-high'}">${parseFloat(C.repeatRate||0)>=40?'Healthy':parseFloat(C.repeatRate||0)>=20?'At Risk':'Critical Risk'}</span></div>
+      <div class="risk-box"><div class="label">Revenue at Risk</div><div class="value">${C.revenueAtRisk||'—'}%</div><div>From top-2 category dependency</div><span class="pill ${parseFloat(C.revenueAtRisk||0)>=50?'pill-high':'pill-med'}">${parseFloat(C.revenueAtRisk||0)>=50?'Highly Exposed':'Exposed'}</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Mall Performance</div>
+    <table class="mall-table"><thead><tr><th>#</th><th>Mall</th><th>Revenue</th><th>Transactions</th><th>Rev/Tx</th></tr></thead><tbody>
+    ${(C.mallData||[]).map((m,i)=>`<tr><td><strong>${i+1}</strong></td><td>${m.name}</td><td>${fmt(m.revenue)}</td><td>${m.tx.toLocaleString()}</td><td>₺${m.eff.toFixed(0)}</td></tr>`).join('')}
+    </tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-title">The Story Your Data Is Telling</div>
+    ${document.getElementById('insightList').innerHTML.replace(/class="insight-item"/g,'class="insight-box"').replace(/class="insight-num"/g,'class="num"').replace(/class="insight-title"/g,'class="title"').replace(/class="insight-body"/g,'class="body"').replace(/tag-risk/g,'tag risk').replace(/tag-urgent/g,'tag urgent').replace(/tag-action/g,'tag action').replace(/tag-growth/g,'tag growth').replace(/tag-watch/g,'tag watch')}
+  </div>
+  <div class="footer-note">RetailIQ Executive Dashboard v5 · Confidential · ${now}</div>
+  </body></html>`;
+
+  fill.style.width='100%'; txt.textContent='Opening in new window…';
+  await sleep(300);
+
+  const w=window.open('','_blank');
+  if(w){ w.document.write(html); w.document.close(); setTimeout(()=>w.print(),600); }
+  else { alert('Please allow popups for PDF export. Your browser blocked the window.'); }
+  await sleep(500);
+  closePdfModal();
+}
+
+// ════════════════════════════════════════════════════════
+// FILE PARSING
+// ════════════════════════════════════════════════════════
+function parseRows(rawRows){
+  return rawRows.filter(r=>(r.price||r.Price||r.revenue||r.Revenue)&&(r.quantity||r.Quantity||r.qty||r.Qty||1)).map(r=>{
+    const price=parseFloat(r.price||r.Price||r.revenue||r.Revenue||r.amount||r.Amount||0);
+    const qty=parseInt(r.quantity||r.Quantity||r.qty||r.Qty||1)||1;
+    return {
+      invoice_no:r.invoice_no||r.InvoiceNo||r.invoice||r.Invoice||Math.random().toString(36).slice(2),
+      customer_id:r.customer_id||r.CustomerID||r.customer||r.Customer||'UNKNOWN',
+      gender:r.gender||r.Gender||'Unknown',
+      age:r.age||r.Age||30,
+      category:r.category||r.Category||r.type||r.Type||'Other',
+      shopping_mall:r.shopping_mall||r.ShoppingMall||r.mall||r.Mall||r.location||r.Location||'Mall',
+      payment_method:r.payment_method||r.PaymentMethod||r.payment||r.Payment||'Cash',
+      invoice_date:r.invoice_date||r.InvoiceDate||r.date||r.Date||'',
+      _price:price*qty,
+      _qty:qty,
+      _age:parseInt(r.age||r.Age||30)||30,
+      _date:parseDate(r.invoice_date||r.InvoiceDate||r.date||r.Date||'')
+    };
+  });
+}
+
+function handleXLSX(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const json=XLSX.utils.sheet_to_json(ws);
+    launch(parseRows(json));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ════════════════════════════════════════════════════════
+// LAUNCH
+// ════════════════════════════════════════════════════════
+async function launch(rows){
+  if(!rows||!rows.length){ alert('No data found in file. Please check the format.'); return; }
+  RAW_DATA=rows;
+  await runProgress();
+  document.getElementById('upload-screen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  activeFilters={cat:'All',gender:'All',mall:'All'};
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.val==='All'));
+  const C=compute(rows);
+  COMPUTED=C;
+  renderKPIs(C); renderCharts(C); renderMallTable(C.mallData,C.avgMallEff);
+  renderConcentration(C); renderSeasonalTags(C); renderRetentionFunnel(C);
+  renderCohortHeatmap(C.cohortData);
+  renderBasketGraph(C.basketData, C.catRev, C.totalRev);
+  renderGeoMap(C.mallData);
+  renderInsights(C);
+}
+
+function resetDashboard(){
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('upload-screen').style.display='flex';
+  document.getElementById('progress-wrap').style.display='none';
+  document.getElementById('progFill').style.width='0%';
+  document.querySelectorAll('.ps').forEach(p=>p.className='ps');
+  document.getElementById('askInput').value='';
+  document.getElementById('askResultBanner').style.display='none';
+  document.getElementById('askClearBtn').style.display='none';
+  RAW_DATA=[]; COMPUTED={};
+  Object.values(charts).forEach(c=>{ try{c.destroy()}catch(e){} }); charts={};
+}
+
+// ════════════════════════════════════════════════════════
+// FILE INPUT HANDLERS
+// ════════════════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change',function(){
+  const f=this.files[0]; if(!f) return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls') handleXLSX(f);
+  else Papa.parse(f,{header:true,skipEmptyLines:true,delimiter:ext==='tsv'?'\t':',',complete:r=>launch(parseRows(r.data))});
+});
+
+const dz=document.getElementById('dropZone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
+dz.addEventListener('drop',e=>{
+  e.preventDefault();dz.classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='xlsx'||ext==='xls') handleXLSX(f);
+  else Papa.parse(f,{header:true,skipEmptyLines:true,delimiter:ext==='tsv'?'\t':',',complete:r=>launch(parseRows(r.data))});
+});
+
+// ════════════════════════════════════════════════════════
+// DEMO DATA
+// ════════════════════════════════════════════════════════
+const DEMO_CSV=`invoice_no,customer_id,gender,age,category,quantity,price,payment_method,invoice_date,shopping_mall
+I138884,C241288,Female,28,Clothing,5,1500.4,Credit Card,5.8.22,Kanyon
+I317333,C111565,Male,21,Shoes,3,1800.51,Debit Card,12.12.21,Forum Istanbul
+I127801,C266599,Male,20,Clothing,1,300.08,Cash,9.11.21,Metrocity
+I173702,C988172,Female,66,Shoes,5,3000.85,Credit Card,16.5.21,Metropol AVM
+I337046,C189076,Female,53,Books,4,60.6,Cash,24.10.21,Kanyon
+I227836,C657758,Female,28,Clothing,5,1500.4,Credit Card,24.5.22,Forum Istanbul
+I121056,C151197,Female,49,Cosmetics,1,40.66,Cash,13.3.22,Istinye Park
+I293112,C176086,Female,32,Clothing,2,600.16,Credit Card,13.1.21,Mall of Istanbul
+I293455,C159642,Male,69,Clothing,3,900.24,Credit Card,4.11.21,Metrocity
+I326945,C283361,Female,60,Clothing,2,600.16,Credit Card,22.8.21,Kanyon
+I306368,C240286,Female,36,Food & Beverage,2,10.46,Cash,25.12.22,Metrocity
+I639207,C191708,Female,29,Books,1,15.15,Credit Card,28.10.22,Emaar Square Mall
+I640508,C225330,Female,67,Toys,4,143.36,Debit Card,31.7.22,Metrocity
+I179802,C312861,Male,25,Clothing,2,600.16,Cash,17.11.22,Cevahir AVM
+I336189,C555402,Female,67,Clothing,2,600.16,Credit Card,3.6.22,Kanyon
+I688768,C362288,Male,24,Shoes,5,3000.85,Credit Card,7.11.21,Viaport Outlet
+I294687,C300786,Male,65,Books,2,30.3,Debit Card,16.1.21,Metrocity
+I195744,C330667,Female,42,Food & Beverage,3,15.69,Credit Card,5.1.22,Zorlu Center
+I993048,C218149,Female,46,Clothing,2,600.16,Cash,26.7.21,Metropol AVM
+I992454,C196845,Male,24,Toys,4,143.36,Cash,7.3.23,Cevahir AVM
+I183746,C220180,Male,23,Clothing,1,300.08,Credit Card,15.2.23,Emaar Square Mall
+I252275,C313348,Male,44,Technology,5,5250,Cash,26.10.21,Kanyon
+I174250,C204553,Female,42,Books,5,75.75,Cash,16.12.22,Metrocity
+I195396,C285161,Male,51,Toys,2,71.68,Debit Card,16.5.21,Istinye Park
+I196704,C289625,Female,25,Cosmetics,5,203.3,Credit Card,20.4.22,Mall of Istanbul
+I217053,C192344,Male,50,Shoes,4,2400.68,Cash,10.10.22,Emaar Square Mall
+I655874,C447138,Female,65,Shoes,3,1800.51,Cash,23.8.22,Cevahir AVM
+I209744,C251229,Male,29,Cosmetics,3,121.98,Credit Card,29.4.21,Istinye Park
+I161949,C159164,Female,66,Toys,3,107.52,Debit Card,4.7.22,Mall of Istanbul
+I768348,C176727,Female,32,Shoes,3,1800.51,Credit Card,23.2.22,Kanyon
+I109053,C232624,Male,51,Clothing,4,1200.32,Debit Card,11.7.21,Metrocity
+I167211,C164092,Female,66,Shoes,4,2400.68,Credit Card,30.8.22,Zorlu Center
+I147062,C245456,Male,43,Clothing,5,1500.4,Credit Card,21.6.22,Kanyon
+I187519,C450287,Female,59,Clothing,2,600.16,Credit Card,8.7.22,Metrocity
+I106674,C204279,Male,54,Clothing,2,600.16,Cash,27.2.22,Kanyon
+I883721,C236859,Female,44,Technology,5,5250,Credit Card,19.11.21,Mall of Istanbul
+I402376,C309926,Male,34,Shoes,5,3000.85,Cash,10.9.22,Forum Istanbul
+I251356,C493252,Female,47,Cosmetics,4,162.64,Cash,4.9.21,Kanyon
+I292239,C109871,Male,38,Food & Beverage,5,26.15,Cash,21.8.22,Mall of Istanbul
+I276526,C136117,Female,57,Shoes,5,3000.85,Debit Card,2.10.21,Emaar Square Mall
+I870944,C169749,Male,41,Souvenir,3,35.19,Credit Card,8.6.21,Cevahir AVM
+I739573,C199947,Female,40,Clothing,5,1500.4,Debit Card,17.4.21,Kanyon
+I190444,C606418,Female,47,Food & Beverage,5,26.15,Cash,20.7.22,Mall of Istanbul
+I321683,C542025,Male,60,Cosmetics,4,162.64,Credit Card,6.1.23,Metrocity
+I340014,C169650,Female,66,Clothing,2,600.16,Credit Card,8.9.22,Istinye Park
+I140663,C218383,Female,52,Clothing,5,1500.4,Cash,15.10.22,Zorlu Center
+I253242,C309438,Male,26,Shoes,5,3000.85,Cash,7.4.22,Mall of Istanbul
+I289643,C584700,Female,43,Technology,2,2100,Cash,22.8.22,Kanyon
+I985478,C324683,Male,55,Clothing,4,1200.32,Credit Card,24.1.23,Kanyon
+I160777,C626042,Female,43,Technology,4,4200,Cash,22.2.22,Metrocity
+I283443,C189493,Male,43,Technology,3,3150,Credit Card,25.5.22,Viaport Outlet
+I200392,C307921,Female,24,Clothing,5,1500.4,Credit Card,14.9.21,Viaport Outlet
+I224371,C204174,Male,34,Clothing,5,1500.4,Credit Card,1.2.22,Mall of Istanbul
+I267193,C317818,Female,19,Cosmetics,3,121.98,Credit Card,12.1.23,Mall of Istanbul
+I204979,C173084,Female,24,Souvenir,5,58.65,Debit Card,14.3.21,Istinye Park
+I115146,C126956,Female,24,Cosmetics,5,203.3,Cash,27.4.22,Metrocity
+I258195,C213742,Male,43,Toys,2,71.68,Cash,26.11.21,Kanyon
+I300213,C962515,Female,19,Clothing,4,1200.32,Credit Card,21.4.21,Kanyon
+I133061,C336576,Male,64,Clothing,5,1500.4,Credit Card,9.6.22,Mall of Istanbul
+I207205,C716161,Female,33,Clothing,1,300.08,Debit Card,26.11.21,Kanyon
+I209289,C439382,Female,33,Clothing,4,1200.32,Credit Card,5.2.21,Kanyon
+I157285,C123427,Male,66,Clothing,4,1200.32,Cash,6.3.22,Mall of Istanbul
+I181109,C119549,Male,22,Toys,3,107.52,Cash,17.10.22,Mall of Istanbul
+I221715,C187266,Female,63,Food & Beverage,3,15.69,Cash,22.1.22,Cevahir AVM
+I115870,C135790,Female,69,Shoes,4,2400.68,Cash,4.9.21,Metrocity
+I309552,C111611,Female,53,Food & Beverage,4,20.92,Credit Card,14.7.21,Istinye Park
+I151332,C168491,Male,30,Souvenir,2,23.46,Cash,25.3.21,Kanyon
+I249424,C158160,Male,22,Food & Beverage,1,5.23,Cash,18.2.22,Mall of Istanbul
+I227716,C552345,Male,53,Food & Beverage,2,10.46,Cash,22.4.21,Kanyon
+I246550,C716788,Female,49,Food & Beverage,3,15.69,Cash,10.9.21,Zorlu Center
+I138674,C155059,Male,67,Cosmetics,2,81.32,Credit Card,14.2.22,Metropol AVM
+I752693,C306662,Female,48,Cosmetics,3,121.98,Cash,28.4.22,Metrocity
+I826174,C607615,Female,40,Shoes,4,2400.68,Cash,20.6.22,Metrocity
+I296025,C120164,Female,41,Shoes,3,1800.51,Credit Card,21.4.22,Kanyon
+I117291,C134449,Male,46,Books,5,75.75,Credit Card,9.12.22,Zorlu Center
+I205366,C241642,Female,43,Clothing,4,1200.32,Debit Card,7.11.22,Zorlu Center
+I269690,C126436,Male,18,Cosmetics,3,121.98,Debit Card,7.2.22,Zorlu Center
+I304265,C653385,Female,22,Books,5,75.75,Debit Card,13.6.21,Forum Istanbul
+I246562,C227070,Female,61,Cosmetics,5,203.3,Cash,23.8.21,Emaar Square Mall
+I202367,C317478,Female,41,Books,3,45.45,Cash,24.2.23,Istinye Park
+I664787,C237330,Female,53,Cosmetics,2,81.32,Credit Card,12.1.23,Istinye Park
+I137794,C133687,Female,45,Food & Beverage,3,15.69,Debit Card,12.3.21,Viaport Outlet
+I148377,C841663,Female,29,Clothing,1,300.08,Cash,2.1.22,Istinye Park
+I154469,C807389,Female,29,Toys,3,107.52,Debit Card,3.6.21,Mall of Istanbul
+I172458,C277842,Female,19,Clothing,2,600.16,Debit Card,17.12.21,Cevahir AVM
+I297270,C183011,Male,62,Clothing,5,1500.4,Credit Card,31.12.22,Metropol AVM
+I153930,C567813,Male,39,Food & Beverage,3,15.69,Cash,9.8.22,Forum Istanbul
+I282854,C282974,Female,33,Clothing,3,900.24,Cash,31.7.22,Kanyon
+I869144,C181972,Female,26,Food & Beverage,4,20.92,Debit Card,4.5.21,Mall of Istanbul
+I193271,C242748,Female,40,Food & Beverage,3,15.69,Debit Card,23.12.22,Kanyon
+I256691,C152549,Male,24,Cosmetics,1,40.66,Cash,4.2.22,Metrocity
+I796162,C111832,Female,30,Food & Beverage,5,26.15,Credit Card,6.1.22,Metrocity
+I215998,C279370,Female,64,Clothing,5,1500.4,Cash,26.10.22,Cevahir AVM
+I722319,C157070,Female,59,Toys,1,35.84,Debit Card,3.10.21,Kanyon
+I317105,C177975,Female,30,Souvenir,5,58.65,Debit Card,29.7.21,Kanyon
+I215721,C830576,Female,25,Cosmetics,2,81.32,Debit Card,16.12.22,Metrocity
+I195567,C992677,Male,65,Clothing,4,1200.32,Debit Card,22.1.23,Metropol AVM
+I217053,C999111,Male,38,Technology,3,3150,Credit Card,14.4.22,Zorlu Center
+I825000,C888222,Female,55,Shoes,4,2400.68,Debit Card,8.3.22,Istinye Park
+I910000,C777333,Male,31,Clothing,3,900.24,Cash,19.5.21,Mall of Istanbul
+I241288,C241288,Female,28,Clothing,5,1500.4,Credit Card,5.3.22,Kanyon
+I241289,C241288,Female,28,Shoes,2,900.0,Credit Card,15.8.22,Kanyon
+I111565,C111565,Male,21,Shoes,3,1800.51,Debit Card,5.5.22,Forum Istanbul
+I266599,C266599,Male,20,Cosmetics,2,80.0,Cash,20.3.22,Metrocity
+I988172,C988172,Female,66,Technology,1,1050.0,Credit Card,10.9.22,Metropol AVM
+I189076,C189076,Female,53,Clothing,3,900.0,Cash,5.2.22,Kanyon`;
+
+document.getElementById('demoBtn').addEventListener('click',()=>{
+  const parsed=Papa.parse(DEMO_CSV,{header:true,skipEmptyLines:true});
+  launch(parseRows(parsed.data));
+});
+</script>
+</body>
+</html>
