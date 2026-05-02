@@ -25,9 +25,9 @@ A breakdown of sales performance by product category, comparing revenue contribu
 A comparative view of regional performance, highlighting revenue gaps, transaction volumes, and efficiency metrics by geography.
 
 KEY INSIGHTS
-1.Electronics is the Top Revenue Driver
+1.Electronics is the Top Revenue Driver:
 Electronics contributes the highest revenue share across all product categories. This segment should be prioritized for inventory planning, promotional spend, and cross-sell bundling strategies.
-2.South Region is Underperforming
+2.South Region is Underperforming:
 The South region consistently lags behind other geographies in both revenue and transaction volume. This points to potential gaps in market penetration, distribution reach, or local marketing effectiveness — warranting a dedicated regional strategy.
-3.Q4 is the Peak Season
+3.Q4 is the Peak Season:
 Quarter 4 shows the strongest sales performance of the year, driven by seasonal demand spikes. This creates a clear opportunity to front-load inventory, plan targeted campaigns, and maximize revenue capture during the high-demand window.
